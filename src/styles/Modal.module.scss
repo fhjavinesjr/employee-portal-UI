@@ -1,0 +1,54 @@
+
+/* The Modal (background) */
+.Modal {
+    display:block; /* Hidden by default */
+    z-index: 1; /* Sit on top */
+    padding-top: 30px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+
+  /* Modal Content */
+  .modalContent {
+    position: relative;
+    background-color: #ffffff;
+    margin: auto;
+    padding: 0;
+    width: 95%;
+    height: 100vh;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    
+  }
+  
+  .modalHeader {
+      display: flex;
+      padding: 1% 2%;
+      flex-direction: row;
+      align-items: flex-start;
+      
+      
+  }
+  
+  .mainTitle {
+    margin-top: auto;
+    margin-bottom: 0;
+    line-height: 60px;
+    border-bottom: 1px solid #9c9a9a;
+    width: 100%; 
+    padding: 0;
+    color: #5a67ba;
+    display: flex; /* Make mainTitle a flex container */
+    justify-content: space-between; /* Push button to the right */
+  }
+  
+  .modalBody {
+      padding: 1% 2%;
+  }
+
+}
+  
