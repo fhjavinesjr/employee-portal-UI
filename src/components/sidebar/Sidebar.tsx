@@ -1,80 +1,147 @@
-'use client'
+"use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { MenuItem } from "./MenuItem";
 import styles from "@/styles/DashboardSidebar.module.scss";
-import { usePathname } from 'next/navigation';
-// import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from "next/navigation";
+
+import { FaHome, FaUserFriends } from "react-icons/fa";
+import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
+import { HiViewGrid } from "react-icons/hi";
+
+// Import the LeaveApplication modal form
+import LeaveApplication from "@/app/employee-portal/selfservice/LeaveApplication/LeaveApplication"; // adjust if needed
 
 const menuItems = [
   {
     id: 1,
-    icon: "/dashboard.png",
+    icon: <FaHome />,
     label: "Dashboard",
     goto: "/employee-portal/dashboard",
-    isActive: true,
   },
   {
     id: 2,
-    icon: "/employee_portal.png",
-    label: "Daily Time Record",
-    goto: "/employee-portal/dtr",
-    isActive: false,
+    icon: <HiViewGrid />,
+    label: "Administrative",
+    goto: "/employee-portal/admin",
   },
   {
     id: 3,
-    icon: "/employee_portal.png",
-    label: "Work Schedule",
-    goto: "/employee-portal/workschedule",
-    isActive: false,
+    icon: <FaUserFriends />,
+    label: "HR Management",
+    goto: "/employee-portal/hr",
   },
-];
-
-const otherItems = [
   {
     id: 4,
-    icon: "/accounts.png",
-    label: "Accounts",
-    goto: "/employee-portal/accounts",
-    isActive: false,
-  },
-  {
-    id: 5,
-    icon: "/help.png",
-    label: "Help",
-    goto: "/employee-portal",
-    isActive: false,
+    icon: <MdAccessTime />,
+    label: "Timekeeping",
+    goto: "/employee-portal/timekeeping",
   },
 ];
 
 export default function Sidebar() {
-  const pathname = usePathname(); // Use usePathname for the current route
-  // const router = useRouter();    // Use useRouter for navigation
+  const pathname = usePathname();
+  const [openESS, setOpenESS] = useState(false);
 
   return (
-    <nav className={styles.Sidebar} role="navigation" aria-label="Main navigation">
-      <div className={styles.brand}>
-        <div className={styles.brandIcon}>EPUI</div>
-        <div className={styles.brandName}>Employee Portal UI</div>
-      </div>
-
-      <div className={styles.menuSection}>
-        <h2 className={styles.menuHeader}>MENU</h2>
-        <div role="menu">
-          {menuItems.map((item, index) => (
-            <MenuItem key={index} icon={item.icon} label={item.label} goto={item.goto} isActive={pathname === item.goto} onClick={() => {}} />
-          ))}
+    <>
+      <nav
+        className={styles.Sidebar}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className={styles.brand}>
+          <div className={styles.brandName}>
+            EMPLOYEE
+            <br />
+            PORTAL
+          </div>
         </div>
-      </div>
 
-      <div className={styles.menuSection}>
-        <h2 className={styles.menuHeader}>UTILITIES</h2>
-        <div role="menu">
-          {otherItems.map((item, index) => (
-            <MenuItem key={index} icon={item.icon} label={item.label} goto={item.goto} isActive={pathname === item.goto} onClick={() => {}} />
+        <div className={styles.menuSection}>
+          {menuItems.map((item) => (
+            <MenuItem
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              goto={item.goto}
+              isActive={pathname === item.goto}
+              onClick={() => {}}
+            />
           ))}
+
+          {/* Employee Self Service Dropdown */}
+          <div
+            className={`${styles.menuItem} ${
+              openESS ? styles.activeMenuItem : ""
+            }`}
+            onClick={() => setOpenESS(!openESS)}
+          >
+            <MdOutlineMiscellaneousServices className={styles.menuIcon} />
+            <span className={styles.menuLabel}>Employee Self Service</span>
+            <span className={styles.dropdownArrow}>{openESS ? "▸" : "▾"}</span>
+
+            {openESS && (
+              <div className={styles.dropdownMenu}>
+                {/* Leave Application -> modal trigger */}
+                <a
+                  href="/employee-portal/selfservice/LeaveApplication"
+                  className={`${styles.subMenuItem} ${
+                    pathname === "/employee-portal/selfservice/LeaveApplication"
+                      ? styles.activeSubMenuItem
+                      : ""
+                  }`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Leave Application
+                </a>
+
+                <a
+                  href="/employee-portal/selfservice/payoff"
+                  className={`${styles.subMenuItem} ${
+                    pathname === "/employee-portal/selfservice/payoff"
+                      ? styles.activeSubMenuItem
+                      : ""
+                  }`}
+                >
+                  Compensatory Time Off
+                </a>
+                <a
+                  href="/employee-portal/selfservice/overtime"
+                  className={`${styles.subMenuItem} ${
+                    pathname === "/employee-portal/selfservice/overtime"
+                      ? styles.activeSubMenuItem
+                      : ""
+                  }`}
+                >
+                  Overtime Request
+                </a>
+                <a
+                  href="/employee-portal/selfservice/timeadjust"
+                  className={`${styles.subMenuItem} ${
+                    pathname === "/employee-portal/selfservice/timeadjust"
+                      ? styles.activeSubMenuItem
+                      : ""
+                  }`}
+                >
+                  Time Correction
+                </a>
+
+                <a
+                  href="/employee-portal/selfservice/OfficialEngagement"
+                  className={`${styles.subMenuItem} ${
+                    pathname === "/employee-portal/selfservice/OfficialEngagement"
+                      ? styles.activeSubMenuItem
+                      : ""
+                  }`}
+                >
+                  Official Engagement
+                </a>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
-};
+}
