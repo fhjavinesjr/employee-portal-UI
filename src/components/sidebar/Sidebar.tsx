@@ -117,9 +117,9 @@ export default function Sidebar() {
                   Overtime Request
                 </a>
                 <a
-                  href="/employee-portal/selfservice/timeadjust"
+                  href="/employee-portal/selfservice/TimeCorrection"
                   className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/timeadjust"
+                    pathname === "/employee-portal/selfservice/TimeCorrection"
                       ? styles.activeSubMenuItem
                       : ""
                   }`}

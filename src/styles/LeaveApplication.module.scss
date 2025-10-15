@@ -1,22 +1,11 @@
 
-
-.title {
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: #2f4da1;
-  margin-bottom: 1rem;
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid #ddd;
-  margin-bottom: 1.5rem;
-}
+/* LeaveApplication.module.scss */
 
 .formGroup {
   display: flex;
   flex-direction: column;
   margin-bottom: 1.5rem;
+  
 
   label {
     font-weight: 600;
