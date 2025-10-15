@@ -1,11 +1,9 @@
+import { ReactElement } from "react";
+
 export interface MenuItemProps {
-  icon: string;
+  icon: string | ReactElement;   // allow both
   label: string;
   goto: string;
   isActive?: boolean;
-  onClick: () => void;
-}
-
-export interface SidebarProps {
-  items: MenuItemProps[];
+  onClick?: () => void;
 }

@@ -1,0 +1,324 @@
+
+/* LeaveApplication.module.scss */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+  
+
+  label {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #333;
+  }
+
+  input,
+  select,
+  textarea {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+
+    &:focus {
+      border-color: #2f4da1;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(47, 77, 161, 0.15);
+    }
+  }
+
+  textarea {
+    resize: none;
+    min-height: 120px;
+  }
+}
+
+/* General Input Styles */
+.inputBase,
+.selectBase,
+.textareaBase {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: #2f4da1;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(47, 77, 161, 0.15);
+  }
+}
+
+.textareaBase {
+  resize: none;
+  min-height: 120px;
+}
+
+/* Individual Labels */
+.labelDateFiled {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #2f4da1; // custom color for this label
+}
+.inputBase,
+.selectBase,
+.dateFiledInput {
+  width: 30%;
+}
+
+.labelLeaveType {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #ff6600;
+}
+
+.labelInclusiveDate {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #009900;
+}
+
+.labelDetails {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #333;
+}
+.labelCommutation {
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #800080;
+}
+
+/* Date Range */
+.dateRange {
+  display: flex;
+  gap: 1rem;
+  flex-direction: column;
+
+  input {
+    flex: 1;
+  }
+}
+
+/* Radio Group */
+.radioGroup {
+  display: flex;
+  gap: 2rem;
+  margin-top: 0.3rem;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  input[type="radio"] {
+    accent-color: #2f4da1;
+    cursor: pointer;
+  }
+}
+
+.submitBtn {
+  width: 10%;
+  background-color: #28a745;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.9rem;
+  margin-right: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+
+  &:hover {
+    background-color: #218838;
+    transform: translateY(-1px); 
+  }
+}
+.clearBtn {
+  width: 10%;
+  background-color: #adb5bd; 
+  color: #fff; 
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.9rem;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+
+  &:hover {
+    background-color: #868e96; 
+    transform: translateY(-1px); 
+  }
+}
+
+.dateItem label {
+  display: block; 
+  margin-bottom: 0.25rem;
+}
+
+.dateItem input {
+  width: 28%; 
+}
+
+/* LeaveApplication table  */
+.leaveapplicationTable {
+  margin-top: 1.5rem;
+  background-color: #ffffff; 
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  padding: 0; 
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1.5rem;
+
+  /* small header area that contains the title */
+  .tableHeader {
+    padding: 0; /* no extra space */
+    margin: 0;
+  }
+
+  .tableTitle {
+    background-color: #f1f1f1; 
+    color: #212529;
+    text-align: center;
+    font-weight: 600;
+    padding: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #ced4da; 
+    margin: 0;
+    border-top-left-radius: 12px; 
+    border-top-right-radius: 12px;
+    border: 1px solid #ccc; 
+  }
+
+  
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+    
+    th,
+    td {
+      border: 1px solid #ccc; /* ✅ visible cell borders */
+      padding: 0.8rem;
+      text-align: center;
+      color: #333;
+      
+    }
+    th{
+      background-color: #f1f1f1; 
+    }
+
+    thead {
+      background-color: #fff; /* ✅ light gray header */
+      font-weight: 600;
+      
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: #f9f9f9; /* ✅ alternate rows */
+    }
+
+    tbody tr:last-child td:first-child {
+      border-bottom-left-radius: 12px; /* ✅ rounded bottom left */
+    }
+
+    tbody tr:last-child td:last-child {
+      border-bottom-right-radius: 12px; /* ✅ rounded bottom right */
+    }
+  }
+}
+
+.printBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #f0eaff; /* subtle purple-ish background */
+  color: #5b2fb6;
+  border: 1px solid #e6dbff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.actions {
+  position: relative;
+  display: inline-block;
+}
+
+/* Match OfficialEngagementTable action button exactly */
+.optionBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  transition: transform 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 10;
+  display: none; /* show when you toggle with JS */
+  flex-direction: column;
+  min-width: 160px;
+}
+
+.detailButton {
+  background-color: #20c997;
+  border: none;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+/* responsive tweaks */
+@media (max-width: 720px) {
+  .table {
+    min-width: 700px;
+  }
+}
+
+/* Button alignment to match your screenshot (left aligned) */
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-start; /* left align submit/clear */
+  align-items: center;
+  margin-top: 1rem;
+}
