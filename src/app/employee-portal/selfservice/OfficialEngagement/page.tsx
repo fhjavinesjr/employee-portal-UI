@@ -7,7 +7,7 @@ import OfficialEngagement from "./OfficialEngagement";
 export default function OfficialEngagementPage() {
   return (
     <Main>
-      <OfficialEngagement onClose={() => {}} />
+      <OfficialEngagement />
     </Main>
   );
 }

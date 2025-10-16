@@ -3,13 +3,9 @@
 import React, { useState } from "react";
 import styles from "@/styles/LeaveApplication.module.scss";
 import modalStyles from "@/styles/Modal.module.scss";
-import OfficialEngagementTable, { OfficialBusiness } from "@/components/tables/officialengagementTable";
+import OfficialEngagementTable from "@/components/tables/officialengagementTable";
 
-interface OfficialEngagementProps {
-  onClose?: () => void;
-}
-
-export default function OfficialEngagement({ onClose }: OfficialEngagementProps) {
+export default function OfficialEngagement() {
   const initialFormState = {
     officialType: "",
     from: "",

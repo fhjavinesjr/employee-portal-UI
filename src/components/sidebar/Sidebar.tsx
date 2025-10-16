@@ -9,9 +9,6 @@ import { FaHome, FaUserFriends } from "react-icons/fa";
 import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
 import { HiViewGrid } from "react-icons/hi";
 
-// Import the LeaveApplication modal form
-import LeaveApplication from "@/app/employee-portal/selfservice/LeaveApplication/LeaveApplication"; // adjust if needed
-
 const menuItems = [
   {
     id: 1,

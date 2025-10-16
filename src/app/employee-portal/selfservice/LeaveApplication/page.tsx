@@ -7,7 +7,7 @@ import LeaveApplication from "./LeaveApplication";
 export default function LeaveApplicationPage() {
   return (
     <Main>
-      <LeaveApplication onClose={() => {}} />
+      <LeaveApplication />
     </Main>
   );
 }

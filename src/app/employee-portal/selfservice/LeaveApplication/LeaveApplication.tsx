@@ -5,10 +5,6 @@ import styles from "@/styles/LeaveApplication.module.scss";
 import modalStyles from "@/styles/Modal.module.scss";
 import LeaveApplicationTable from "@/components/tables/leaveapplicationTable"; // ✅ import your table
 
-interface LeaveApplicationProps {
-  onClose?: () => void;
-}
-
 interface LeaveData {
   dateFiled: string;
   from: string;
@@ -19,7 +15,7 @@ interface LeaveData {
   status: string;
 }
 
-export default function LeaveApplication({ onClose }: LeaveApplicationProps) {
+export default function LeaveApplication() {
   const initialFormState = {
     dateFiled: "",
     leaveType: "",
