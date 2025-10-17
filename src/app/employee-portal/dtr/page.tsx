@@ -81,7 +81,7 @@ export default function DTRPage() {
       const emp = { employeeNo: empNo, fullName: fullname } as Employee;
       setSelectedEmployee(emp);
 
-      if (role === "ROLE_ADMIN") {
+      if (role === "1") {
         setInputValue(`[${emp.employeeNo}] ${emp.fullName}`);
       }
     }
@@ -216,18 +216,18 @@ export default function DTRPage() {
                 <input
                   id="employee"
                   type="text"
-                  list={userRole === "ROLE_ADMIN" ? "employee-list" : undefined}
+                  list={userRole === "1" ? "employee-list" : undefined}
                   placeholder="Employee No / Lastname"
                   value={
-                    userRole === "ROLE_ADMIN"
+                    userRole === "1"
                       ? inputValue // ✅ Admin can type freely
                       : selectedEmployee
                       ? `[${selectedEmployee.employeeNo}] ${selectedEmployee.fullName}`
                       : ""
                   }
-                  readOnly={userRole !== "ROLE_ADMIN"} // ✅ Non-admin can't edit
+                  readOnly={userRole !== "1"} // ✅ Non-admin can't edit
                   onChange={(e) => {
-                    if (userRole === "ROLE_ADMIN") {
+                    if (userRole === "1") {
                       setInputValue(e.target.value); // ✅ Track admin typing
 
                       const selected = employees.find(
@@ -239,7 +239,7 @@ export default function DTRPage() {
                     }
                   }}
                 />
-                {userRole === "ROLE_ADMIN" && (
+                {userRole === "1" && (
                   <datalist id="employee-list">
                     {employees.map((emp) => (
                       <option
