@@ -1,11 +1,7 @@
-import React from 'react';
-import Sidebar from '@/components/sidebar/Sidebar';
+"use client";
+import React from "react";
 
-export default function Main({children}: {children: React.ReactNode}) {
-    return (
-        <div style={{ display: "flex" }}>
-            <Sidebar />
-            {children}
-        </div>
-    )
+export default function Main({ children }: { children: React.ReactNode }) {
+  // keep this as a client wrapper only
+  return <>{children}</>;
 }

@@ -1,0 +1,201 @@
+
+
+
+.dashboardContainer {
+  max-width: 1280px;
+  margin: var(--header-gap) auto 16px;
+  padding: 26px 36px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+  color: var(--text-color);
+  min-width: 0;
+  margin-top: auto;
+}
+
+.pageTitle {
+  color: var(--link-color);
+  justify-content: space-between;
+  width: 100%;
+  margin-top: auto;
+  margin-bottom: 0;
+  padding: 0;
+  line-height: 60px;
+  display: flex;
+}
+
+/* Dark mode override */
+[data-theme="dark"] .pageTitle {
+  color: #ffffff; /* make profile title white in dark mode */
+}
+
+.sectionDivider {
+  height: 1px;
+  background: var(--subtext-color);
+  margin: 0 0 30px;
+  border-radius: 1px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--text-color);
+}
+
+.profileContent {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ProfileWrapper {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.profilePictureContainer {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: var(--card-bg);
+  margin-bottom: 50px;
+
+  /* Light mode border */
+  border: 3px solid #000000;
+
+  /* Dark mode border */
+  [data-theme="dark"] & {
+    border: 3px solid #ffffff; /* white border in dark mode */
+  }
+}
+
+.uploadButton {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+
+  /* Light mode background */
+  background-color: #000000; 
+  color: #ffffff;
+
+  /* Dark mode background */
+  [data-theme="dark"] & {
+    background-color: #ffffff; /* white background in dark mode */
+    color: #000000;             /* black camera icon in dark mode */
+  }
+
+  &:hover {
+    transform: scale(1.06);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+  }
+}
+
+
+.avatarWrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60ch;
+}
+
+.email {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--subtext-color);
+  margin: 6px 0 0;
+  line-height: 1.3;
+  word-break: break-word;
+  max-width: 60ch;
+  opacity: 0.9;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px 40px;
+  align-items: start;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+
+  label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    color: var(--text-color);
+  }
+}
+
+.staticField {
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: var(--text-color);
+  border: 1px solid var(--subtext-color);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .dashboardContainer {
+    margin: 16px;
+    padding: 18px;
+    border-radius: 10px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .ProfileWrapper {
+    gap: 16px;
+    align-items: center;
+  }
+}

@@ -1,4 +1,4 @@
-import { localStorageUtil } from '../../lib/utils/localStorageUtil';
+import { localStorageUtil } from './localStorageUtil';
 
 export const logout = () => {
   localStorageUtil.clear(); // Clear localStorage token

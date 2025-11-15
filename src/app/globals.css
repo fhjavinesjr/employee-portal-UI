@@ -1,0 +1,44 @@
+/* ------------------ BASE STYLES ------------------ */
+body {
+  background-color: var(--page-bg);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  color: var(--text-color);
+}
+
+/* ------------------ LIGHT MODE VARIABLES ------------------ */
+:root {
+  /* Page and header */
+  --page-bg: #f3f4f6;        /* Light page background */
+  --header-bg: #ffffff;      /* Light header background */
+  --header-text-color: #1a1a1a;
+  --header-icon-color: #1a1a1a;
+  --header-icon-hover-color: #4f46e5;
+
+  /* Card and text */
+  --card-bg: #ffffff;
+  --text-color: #1f2937;
+  --subtext-color: #4b5563;
+  --link-color: #2563eb;
+  --link-hover-color: #1e40af;
+
+  /* Sidebar (fixed in light mode only) */
+  --sidebar-bg: #ffffff;
+}
+
+/* ------------------ DARK MODE VARIABLES ------------------ */
+[data-theme="dark"] {
+  /* Page and header only (sidebar stays light) */
+  --page-bg: #111827;         /* Darker page background */
+  --header-bg: #1f2937;       /* Dark header background */
+  --header-text-color: #ffffff;
+  --header-icon-color: #ffffff;
+  --header-icon-hover-color: #6366f1;
+
+  /* Text and links */
+  --card-bg: #1e293b;
+  --text-color: #f9fafb;
+  --subtext-color: #d1d5db;
+  --link-color: #93c5fd;
+  --link-hover-color: #bfdbfe;
+}
