@@ -1,22 +1,16 @@
-//Layout.tsx is the main parent file
-
-import type { Metadata } from "next";
-import './globals.css';
-
-export const metadata: Metadata = {
+import "./globals.css";
+import LayoutClientWrapper from "./layoutClientWrapper";
+export const metadata = {
   title: "Employee Portal",
-  description: "Powered by NextJS",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="Employee-Portal" >
-        {children}
+      <body>
+        <LayoutClientWrapper>
+          {children}
+        </LayoutClientWrapper>
       </body>
     </html>
   );

@@ -1,0 +1,213 @@
+.dashboardContainer {
+  padding: 20px;
+}
+
+/* ------------------ TITLES ------------------ */
+.pageTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+[data-theme="dark"] .pageTitle {
+  color: #ffffff; /* softer light text for dark mode */
+}
+
+/* ------------------ TITLE + DIVIDER ------------------ */
+.subtitle {
+  color: #000000;
+  margin-bottom: 20px;
+}
+
+.divider {
+  height: 1px;
+  background-color: #000000;
+  margin: 10px 0 16px;
+  margin-bottom: 50px;
+}
+
+[data-theme="dark"] .divider {
+  background-color: #ffffff; 
+}
+
+/* Dark mode overrides */
+[data-theme="dark"] .subtitle {
+  color: #ffffff; 
+}
+
+/* ------------------ SUMMARY CARDS ------------------ */
+.summaryContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cardTop h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.cardTop {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.card p {
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+/* ------------------ DARK MODE FOR SUMMARY CARDS ------------------ */
+[data-theme="dark"] .card {
+  background-color: #1f2937; /* matches sidebar/header dark color */
+  border-color: #949598;
+}
+
+[data-theme="dark"] .cardTop h3 {
+  color: #f9fafb; /* light text */
+}
+
+[data-theme="dark"] .cardTop {
+  color: #f9fafb; /* light text */
+}
+
+[data-theme="dark"] .card p {
+  color: #d1d5db; /* softer light text */
+}
+
+/* ------------------ ANNOUNCEMENTS ------------------ */
+.announcementWrapper {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 40px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.announcementsSection {
+  width: 100%;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #1f2937;
+  margin-bottom: 20px;
+}
+
+.announcementContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.announcementCard {
+  background-color: #eaeff3;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
+  }
+
+  .date {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 10px;
+  }
+
+  .desc {
+    font-size: 0.9rem;
+    color: #374151;
+    margin-bottom: 12px;
+  }
+
+  .readMore {
+    font-size: 0.85rem;
+    color: #2563eb;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+
+    &:hover {
+      color: #1e40af;
+    }
+  }
+}
+
+/* ------------------ DARK MODE FOR ANNOUNCEMENT CARDS ------------------ */
+[data-theme="dark"] .announcementWrapper {
+  background-color: #1f2937; /* match sidebar/header */
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .sectionHeader {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .announcementCard {
+  background-color: #313e51; /* match sidebar/header */
+  border-color: #374151;
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .announcementCard h4 {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .announcementCard .date {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .announcementCard .desc {
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .announcementCard .readMore {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .announcementCard .readMore:hover {
+  color: #bfdbfe;
+}

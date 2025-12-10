@@ -25,6 +25,7 @@
     "dotenv": "^17.2.3",
     "formidable": "^3.5.2",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.554.0",
     "next": "^15.1.6",
     "react": "^18.2.0",
     "react-country-state-city": "^1.1.10",

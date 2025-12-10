@@ -1,0 +1,318 @@
+
+
+
+/* 🧭 HEADER CONTAINER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  background-color: var(--header-bg);
+  color: var(--header-text-color);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  position: sticky;
+  top: 0; // 👈 this makes it actually sticky
+  z-index: 1000;
+}
+
+/* 🏷️ HEADER TITLE */
+.title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--header-text-color);
+}
+
+/* 💬 ACTIONS CONTAINER */
+.actions {
+  display: flex;
+  align-items: center; /* Centers vertically */
+  justify-content: flex-end;
+  gap: 16px;
+  height: 100%; /* Make sure it matches the header height */
+
+  /* Fix slight vertical offset for icons */
+  svg,
+  .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    font-size: 1.25rem;
+    position: relative;
+    top: 1px; /* Slight tweak to align perfectly with text/avatar */
+    cursor: pointer;
+    color: var(--header-icon-color, #374151);
+    transition: color 0.2s ease;
+  }
+
+  svg:hover,
+  .icon:hover {
+    color: var(--header-icon-hover-color, #2563eb);
+  }
+
+  /* Button for theme toggle */
+  .themeToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    height: 34px;
+    width: 34px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="dark"] & {
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  /* Avatar styling */
+  .avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    cursor: pointer;
+    position: relative;
+    top: 1px; /* aligns perfectly with icons */
+  }
+}
+
+
+
+/* 🔔 ICON STYLING */
+.icon {
+  font-size: 1.25rem;
+  color: var(--header-icon-color);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.icon:hover {
+  color: var(--header-icon-hover-color);
+}
+
+/* 🌙 THEME TOGGLE */
+.themeToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--header-text-color);
+  font-size: 18px;
+  height: 20px;
+  border-left: 1px solid rgba(0, 0, 0, 0.2);
+  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 0 6px;
+  transition: color 0.3s ease;
+
+  [data-theme="dark"] & {
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  &:hover {
+    color: var(--header-icon-hover-color);
+  }
+}
+
+/* 👤 AVATAR */
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--header-bg);
+  cursor: pointer;
+}
+
+/* 🔔 NOTIFICATION WRAPPER */
+.notificationWrapper {
+  position: relative;
+}
+
+/* 🧾 DROPDOWN PANEL */
+.panel {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 320px;
+  background: var(--card-bg);
+  color: var(--header-text-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  z-index: 2000;
+  max-height: 420px;
+  overflow-y: auto;
+  transition: all 0.2s ease;
+}
+
+/* 📰 DROPDOWN HEADER TEXT */
+.headerText {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 8px;
+  color: var(--header-text-color);
+}
+
+/* 📄 CATEGORY ROWS */
+.row {
+  margin: 6px 0;
+}
+
+.rowButton {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--header-text-color);
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.rowButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="dark"]) .rowButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* CARET SYMBOL (▸ ▾) */
+.caret {
+  opacity: 0.7;
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+
+/* 🔽 SUBLIST INSIDE DROPDOWN */
+.subList {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 6px;
+  border-left: 2px solid rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="dark"]) .subList {
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+/* 📑 INDIVIDUAL ITEMS */
+.item {
+  margin-bottom: 6px;
+}
+
+.link {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  border-radius: 6px;
+  color: var(--header-text-color);
+  transition: background 0.2s ease;
+}
+
+.link:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="dark"]) .link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 📅 META INFO */
+.meta {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ================================
+   👤 PROFILE DROPDOWN (NEW)
+=================================== */
+
+.profileWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Dropdown box */
+.profileDropdown {
+  position: absolute;
+  top: 42px; /* Slightly below avatar */
+  right: 0;
+  width: 180px;
+  background: var(--card-bg);
+  color: var(--header-text-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 3000;
+  animation: fadeSlide 0.15s ease;
+}
+
+/* Dropdown buttons */
+.profileItem {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--header-text-color);
+  transition: background 0.2s ease;
+  border-radius: 6px;
+}
+
+.profileItem:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme="dark"]) .profileItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Fade + slight slide animation */
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.profileItem {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* space between icon and text */
+}
+
+.dropdownIcon {
+  font-size: 1.1rem; /* keeps icons same size */
+}

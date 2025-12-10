@@ -1,16 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import styles from "@/styles/LoginForm.module.scss";
 import InputFieldSetup from "../../../components/login/InputFieldSetup";
 import ButtonSetup from "../../../components/login/SetupButton";
 import Image from "next/image";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { useRouter } from "next/navigation"; //use next/navigation if the page is dynamic (server-rendered or client-rendered)
+import { useRouter } from "next/navigation";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { Employee } from '@/lib/types/Employee';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
 
 export default function LoginPage() {
@@ -46,28 +47,28 @@ export default function LoginPage() {
       const token = await response.text();
       localStorageUtil.set(token); // Store authToken
 
+      // Set logged-in flag for AuthGuard
+      localStorage.setItem("isLoggedIn", "true");
+
       // Fetch employees
-      const empRes = await fetchWithAuth(
-        `${API_BASE_URL}/api/employees/basicInfo`
-      );
+      const empRes = await fetchWithAuth(`${API_BASE_URL}/api/employees/basicInfo`);
 
       if (!empRes.ok) {
         throw new Error("Failed to fetch employee list");
       }
 
       const employees: Employee[] = await empRes.json();
-      localStorageUtil.setEmployees(employees); //Store employees list to be used later in other module
+      localStorageUtil.setEmployees(employees); // Store employees list
 
       // Identify current employee
       const currentEmp = employees.find(emp => emp.employeeNo === employeeNo);
-
       if (currentEmp) {
-        localStorageUtil.setEmployeeNo(currentEmp.employeeNo); // Store employeeNo
-        localStorageUtil.setEmployeeFullname(currentEmp.fullName); // Store fullname
+        localStorageUtil.setEmployeeNo(currentEmp.employeeNo);
+        localStorageUtil.setEmployeeFullname(currentEmp.fullName);
         localStorageUtil.setEmployeeRole(currentEmp.role);
       }
 
-      // Success
+      // Success alert & redirect
       Swal.fire({
         title: "Login Successfully!",
         text: "Press OK to proceed",
@@ -75,11 +76,10 @@ export default function LoginPage() {
         confirmButtonText: "OK",
         allowOutsideClick: false,
         backdrop: true,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          router.push("/employee-portal/dashboard");
-        }
+      }).then(() => {
+        router.push("/employee-portal/dashboard");
       });
+
     } catch (error) {
       console.error("Login error:", error);
       Swal.fire({
@@ -91,15 +91,21 @@ export default function LoginPage() {
     }
   };
 
+  useEffect(() => {
+    // Force light theme for login page
+    document.documentElement.setAttribute("data-theme", "light");
+    localStorage.removeItem("theme"); // Optional: remove dark mode
+  }, []);
+
   return (
-    <form onSubmit={handleSubmit} className={styles.Login} action="">
+    <form onSubmit={handleSubmit} className={styles.Login}>
       <div className={styles.loginImageInput}>
         <div className={styles.loginImage}>
           <Image
             src="/sti-icon.png"
             width={500}
             height={500}
-            alt="Picture of the author"
+            alt="Employee Portal"
           />
         </div>
         <div className={styles.borderLeft}></div>
@@ -121,7 +127,6 @@ export default function LoginPage() {
             id="passwordId"
             required="true"
           />
-
           <ButtonSetup buttonType="submit" label="Sign In" />
           <ButtonSetup buttonType={undefined} label="Forgot Password?" />
           <div className={styles.horizontalLine}></div>

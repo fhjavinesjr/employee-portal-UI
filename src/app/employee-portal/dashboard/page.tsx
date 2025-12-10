@@ -1,11 +1,13 @@
-import React from 'react'
-import Main from '@/app/employee-portal/main/Main';
-import Dashboard from './Dashboard';
+import AuthGuard from "@/app/employee-portal/AuthGuard";
+import Main from "@/app/employee-portal/main/Main";
+import Dashboard from "./Dashboard";
 
 export default function DashboardPage() {
-    return (
-        <Main>
-            <Dashboard />
-        </Main>
-    );
+  return (
+    <AuthGuard>
+      <Main>
+        <Dashboard />
+      </Main>
+    </AuthGuard>
+  );
 }
