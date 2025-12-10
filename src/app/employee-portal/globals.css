@@ -1,7 +1,44 @@
+/* ------------------ BASE STYLES ------------------ */
 
 body {
-  background-color: #E0E0E0;
+  background-color: var(--page-bg); /* Always use variable */
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
+  color: var(--text-color);
 }
-    
+
+/* ------------------ LIGHT MODE VARIABLES ------------------ */
+:root {
+  /* Page and header */
+  --page-bg: #E0E0E0;        /* Use your original background color */
+  --header-bg: #ffffff;
+  --header-text-color: #1a1a1a;
+  --header-icon-color: #1a1a1a;
+  --header-icon-hover-color: #4f46e5;
+
+  /* Card and text */
+  --card-bg: #ffffff;
+  --text-color: #1f2937;
+  --subtext-color: #4b5563;
+  --link-color: #2563eb;
+  --link-hover-color: #1e40af;
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+}
+
+/* ------------------ DARK MODE VARIABLES ------------------ */
+[data-theme="dark"] {
+  --page-bg: #111827;         /* Your existing dark mode background */
+  --header-bg: #1f2937;
+  --header-text-color: #ffffff;
+  --header-icon-color: #ffffff;
+  --header-icon-hover-color: #6366f1;
+
+  /* Text and links */
+  --card-bg: #1e293b;
+  --text-color: #f9fafb;
+  --subtext-color: #d1d5db;
+  --link-color: #93c5fd;
+  --link-hover-color: #bfdbfe;
+}

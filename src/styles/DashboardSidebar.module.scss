@@ -1,13 +1,14 @@
 .Sidebar {
-  background-color: #1f2937; // dark navy/gray
-  width: 240px;
+  background-color: #1f2937; /* dark navy/gray */
   height: 100dvh;
   display: flex;
   flex-direction: column;
   padding-top: 20px;
   color: white;
-  position: relative; // important for dropdown positioning
-
+  position: relative; /* important for dropdown positioning */
+  z-index: 1000;
+ 
+  
   .brand {
     padding: 20px;
     font-weight: bold;
@@ -50,7 +51,7 @@
   }
 
   .activeMenuItem {
-    background-color: #111827;
+    background-color: #26324c;
     color: #ffffff;
     font-weight: 500;
   }
@@ -83,7 +84,7 @@
     display: flex;
     flex-direction: column;
     min-width: 200px;
-    z-index: 100;
+    
   }
 
   .subMenuItem,
@@ -92,6 +93,7 @@
     font-size: 13px;
     text-decoration: none;
     transition: background-color 0.2s, color 0.2s;
+    
   }
 
   .subMenuItem {
@@ -109,3 +111,4 @@
     font-weight: 500;
   }
 }
+

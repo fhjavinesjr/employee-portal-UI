@@ -1,0 +1,82 @@
+.panel {
+  width: 320px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  padding: 12px;
+  position: absolute;
+  top: 36px;
+  right: 0;
+  z-index: 2000;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.header {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 8px;
+}
+
+.row {
+  margin: 6px 0;
+}
+
+.rowButton {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.caret {
+  opacity: 0.7;
+  margin-left: 8px;
+}
+
+.subList {
+  list-style: none;
+  margin: 6px 0 0 0;
+  padding: 6px;
+  border-left: 2px solid #f1f5f9;
+}
+
+.item {
+  margin-bottom: 6px;
+}
+
+.link {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 6px;
+}
+
+.link:hover {
+  background: #f8fafc;
+}
+
+.meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.empty {
+  padding: 8px;
+  color: #6b7280;
+  font-style: italic;
+}

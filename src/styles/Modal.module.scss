@@ -51,4 +51,41 @@
   }
 
 }
-  
+  /* ---------------------------------------------------
+   ⚫ DARK MODE SUPPORT
+   This makes the modal match your dark theme
+--------------------------------------------------- */
+:global([data-theme="dark"]) .Modal {
+
+  .modalContent {
+    background-color: var(--card-bg); /* dark mode card */
+    color: var(--text-color);
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.06);
+  }
+
+  .modalHeader {
+    border-color: var(--subtext-color);
+  }
+
+  .mainTitle {
+    color: var(--text-color);
+    border-bottom: 1px solid var(--subtext-color);
+  }
+
+  .modalBody {
+    color: var(--text-color);
+  }
+
+  /* Form text inside modal */
+  p,
+  label {
+    color: var(--text-color) !important;
+  }
+
+  /* Static fields (white in light mode but must go dark) */
+  .staticField {
+    background-color: var(--card-bg) !important;
+    border-color: var(--subtext-color) !important;
+    color: var(--text-color) !important;
+  }
+}
