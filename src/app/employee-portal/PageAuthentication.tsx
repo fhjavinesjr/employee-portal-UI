@@ -16,27 +16,34 @@ export default function PageAuthentication({ children }: PageAuthenticationProps
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // ---- REFRESH ACTIVITY TIMESTAMP ----
+    let isRedirecting = false; // Prevent multiple redirects
+
     const refreshActivity = () => {
       localStorage.setItem("lastActivity", Date.now().toString());
     };
 
-    // ---- CHECK IF SESSION EXPIRED OR LOGGED OUT ----
     const checkExpiration = () => {
+      if (isRedirecting) return;
+
       const loggedIn = localStorage.getItem("isLoggedIn") === "true";
       const lastActivity = Number(localStorage.getItem("lastActivity") || 0);
       const now = Date.now();
 
-      // Expire if inactive
-      if (loggedIn && lastActivity && now - lastActivity > INACTIVITY_LIMIT) {
+      // If logged in but inactive
+      if (loggedIn && now - lastActivity > INACTIVITY_LIMIT) {
         localStorage.setItem("isLoggedIn", "false");
         localStorage.removeItem("lastActivity");
-        router.replace("/employee-portal/login");
+
+        if (!PUBLIC_PAGES.includes(pathname)) {
+          isRedirecting = true;
+          router.replace("/employee-portal/login");
+        }
         return true;
       }
 
-      // Normal route protection
+      // If not logged in and trying to access protected page
       if (!loggedIn && !PUBLIC_PAGES.includes(pathname)) {
+        isRedirecting = true;
         router.replace("/employee-portal/login");
         return true;
       }
@@ -45,37 +52,36 @@ export default function PageAuthentication({ children }: PageAuthenticationProps
       return false;
     };
 
-    // ---- INITIAL CHECK ----
+    // Initial check
     checkExpiration();
     refreshActivity();
 
-    // ---- USER ACTIVITY LISTENERS ----
     const userEvents = ["click", "keypress", "mousemove", "scroll", "touchstart"];
-    userEvents.forEach(event =>
-      window.addEventListener(event, refreshActivity)
-    );
+    userEvents.forEach(event => window.addEventListener(event, refreshActivity));
 
-    // ---- MULTI-TAB SYNC ----
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "isLoggedIn" && event.newValue !== "true") {
-        router.replace("/employee-portal/login");
-      }
-      if (event.key === "lastActivity") {
-        checkExpiration();
+        if (!PUBLIC_PAGES.includes(pathname) && !isRedirecting) {
+          isRedirecting = true;
+          router.replace("/employee-portal/login");
+        }
       }
     };
     window.addEventListener("storage", handleStorage);
 
-    // ---- CLEANUP ----
+    // Interval check for background tabs
+    const interval = setInterval(() => {
+      checkExpiration();
+    }, 1000);
+
     return () => {
-      userEvents.forEach(event =>
-        window.removeEventListener(event, refreshActivity)
-      );
+      userEvents.forEach(event => window.removeEventListener(event, refreshActivity));
       window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
     };
   }, [router, pathname]);
 
-  if (checking) return null; // prevent flashing
+  if (checking) return null;
 
   return <>{children}</>;
 }
