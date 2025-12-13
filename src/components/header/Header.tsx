@@ -87,7 +87,6 @@ export default function Header() {
 
           {open && (
             <div className={styles.profileDropdown}>
-              
               {/* ----------------- PROFILE BUTTON ----------------- */}
               <button
                 className={styles.profileItem}
@@ -121,16 +120,14 @@ export default function Header() {
                 onClick={() => {
                   setOpen(false);
 
-                  //  Clear localStorage
-                  localStorage.clear();
+                  localStorage.setItem("isLoggedIn", "false");
+                  router.replace("/employee-portal/login");
+
 
                   //  Delete token cookie
                   document.cookie = "token=; path=/; max-age=0";
-
-                  //  Redirect to login
-                  router.push("/employee-portal/login");
                 }}
-               >
+              >
                 <FiLogOut className={styles.dropdownIcon} /> Log out
               </button>
             </div>

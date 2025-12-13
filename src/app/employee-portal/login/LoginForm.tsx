@@ -47,8 +47,11 @@ export default function LoginPage() {
       const token = await response.text();
       localStorageUtil.set(token); // Store authToken
 
-      // Set logged-in flag for AuthGuard
+      // Set logged-in flag for PageAuthentication
       localStorage.setItem("isLoggedIn", "true");
+
+      // Set login timestamp for 15-min expiration
+      localStorage.setItem("lastActivity", Date.now().toString());
 
       // Fetch employees
       const empRes = await fetchWithAuth(`${API_BASE_URL}/api/employees/basicInfo`);
