@@ -2,86 +2,104 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import { AUTH_CONFIG } from "@/lib/utils/auth.config";
+import { getCookie, setCookie, deleteCookie } from "@/lib/utils/cookies";
 
 interface PageAuthenticationProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_PAGES = ["/employee-portal/login", "/employee-portal/registration"];
-const INACTIVITY_LIMIT = 1 * 60 * 1000; // 1 minute for testing
-
 export default function PageAuthentication({ children }: PageAuthenticationProps) {
   const router = useRouter();
   const pathname = usePathname() || "";
   const [checking, setChecking] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    let isRedirecting = false; // Prevent multiple redirects
+    setIsClient(true); // mark client hydration
 
-    const refreshActivity = () => {
-      localStorage.setItem("lastActivity", Date.now().toString());
+    let isRedirecting = false;
+
+    const logout = () => {
+      // Delete all auth cookies
+      Object.values(AUTH_CONFIG.COOKIE).forEach(deleteCookie);
+
+      // Optional cleanup of localStorage
+      localStorage.clear();
+
+      isRedirecting = true;
+      router.replace("/employee-portal/login");
     };
 
-    const checkExpiration = () => {
+    const checkAuth = () => {
       if (isRedirecting) return;
 
-      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
-      const lastActivity = Number(localStorage.getItem("lastActivity") || 0);
+      // Check if logged in
+      const cookieLoggedIn = getCookie(AUTH_CONFIG.COOKIE.IS_LOGGED_IN) === "true";
+
+      // Last activity from localStorage or fallback cookie
+      const lastActivity =
+        Number(localStorage.getItem(AUTH_CONFIG.COOKIE.LAST_ACTIVITY)) ||
+        Number(getCookie(AUTH_CONFIG.COOKIE.LAST_ACTIVITY)) ||
+        0;
+
       const now = Date.now();
 
-      // If logged in but inactive
-      if (loggedIn && now - lastActivity > INACTIVITY_LIMIT) {
-        localStorage.setItem("isLoggedIn", "false");
-        localStorage.removeItem("lastActivity");
-
-        if (!PUBLIC_PAGES.includes(pathname)) {
-          isRedirecting = true;
-          router.replace("/employee-portal/login");
-        }
-        return true;
+      // Not logged in → redirect
+      if (!cookieLoggedIn && !AUTH_CONFIG.PUBLIC_PAGES.includes(pathname)) {
+        logout();
+        return;
       }
 
-      // If not logged in and trying to access protected page
-      if (!loggedIn && !PUBLIC_PAGES.includes(pathname)) {
-        isRedirecting = true;
-        router.replace("/employee-portal/login");
-        return true;
+      // Inactivity timeout
+      if (cookieLoggedIn && now - lastActivity > AUTH_CONFIG.INACTIVITY_LIMIT * 1000) {
+        logout();
+        return;
+      }
+
+      // Refresh activity if logged in
+      if (cookieLoggedIn) {
+        setCookie(
+          AUTH_CONFIG.COOKIE.IS_LOGGED_IN,
+          "true",
+          AUTH_CONFIG.INACTIVITY_LIMIT
+        );
+        localStorage.setItem(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString());
       }
 
       setChecking(false);
-      return false;
     };
 
-    // Initial check
-    checkExpiration();
-    refreshActivity();
+    // Initial auth check
+    checkAuth();
 
+    // User activity events
     const userEvents = ["click", "keypress", "mousemove", "scroll", "touchstart"];
-    userEvents.forEach(event => window.addEventListener(event, refreshActivity));
+    userEvents.forEach((e) => window.addEventListener(e, checkAuth));
 
+    // Cross-tab logout sync
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === "isLoggedIn" && event.newValue !== "true") {
-        if (!PUBLIC_PAGES.includes(pathname) && !isRedirecting) {
-          isRedirecting = true;
-          router.replace("/employee-portal/login");
-        }
+      if (event.key === AUTH_CONFIG.COOKIE.IS_LOGGED_IN && event.newValue !== "true") {
+        logout();
       }
     };
     window.addEventListener("storage", handleStorage);
 
-    // Interval check for background tabs
-    const interval = setInterval(() => {
-      checkExpiration();
-    }, 1000);
+    // Periodic inactivity check
+    const interval = setInterval(checkAuth, 1000);
 
+    // Cleanup listeners
     return () => {
-      userEvents.forEach(event => window.removeEventListener(event, refreshActivity));
+      userEvents.forEach((e) => window.removeEventListener(e, checkAuth));
       window.removeEventListener("storage", handleStorage);
       clearInterval(interval);
     };
-  }, [router, pathname]);
+  }, [pathname, router]);
 
-  if (checking) return null;
+  // Render blank page until auth is verified
+  if (!isClient || checking) {
+    return <div style={{ width: "100vw", height: "100vh", backgroundColor: "#fff" }} />;
+  }
 
   return <>{children}</>;
 }

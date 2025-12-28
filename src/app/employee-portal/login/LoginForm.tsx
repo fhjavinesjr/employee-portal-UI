@@ -10,7 +10,11 @@ import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
-import { Employee } from '@/lib/types/Employee';
+import { Employee } from "@/lib/types/Employee";
+import { AUTH_CONFIG } from "@/lib/utils/auth.config";
+import { setCookie } from "@/lib/utils/cookies";
+
+const { INACTIVITY_LIMIT } = AUTH_CONFIG;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
 
@@ -47,14 +51,23 @@ export default function LoginPage() {
       const token = await response.text();
       localStorageUtil.set(token); // Store authToken
 
-      // Set logged-in flag for PageAuthentication
-      localStorage.setItem("isLoggedIn", "true");
+      // after successful login:
+      const now = Date.now();
+      
+      setCookie(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true", INACTIVITY_LIMIT);
+      setCookie(
+        AUTH_CONFIG.COOKIE.LAST_ACTIVITY,
+        now.toString(),
+        INACTIVITY_LIMIT
+      );
 
-      // Set login timestamp for 15-min expiration
-      localStorage.setItem("lastActivity", Date.now().toString());
+      localStorage.setItem(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true");
+      localStorage.setItem(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString());
 
       // Fetch employees
-      const empRes = await fetchWithAuth(`${API_BASE_URL}/api/employees/basicInfo`);
+      const empRes = await fetchWithAuth(
+        `${API_BASE_URL}/api/employees/basicInfo`
+      );
 
       if (!empRes.ok) {
         throw new Error("Failed to fetch employee list");
@@ -64,7 +77,7 @@ export default function LoginPage() {
       localStorageUtil.setEmployees(employees); // Store employees list
 
       // Identify current employee
-      const currentEmp = employees.find(emp => emp.employeeNo === employeeNo);
+      const currentEmp = employees.find((emp) => emp.employeeNo === employeeNo);
       if (currentEmp) {
         localStorageUtil.setEmployeeNo(currentEmp.employeeNo);
         localStorageUtil.setEmployeeFullname(currentEmp.fullName);
@@ -82,7 +95,6 @@ export default function LoginPage() {
       }).then(() => {
         router.push("/employee-portal/dashboard");
       });
-
     } catch (error) {
       console.error("Login error:", error);
       Swal.fire({
