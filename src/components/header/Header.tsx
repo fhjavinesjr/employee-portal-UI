@@ -14,6 +14,7 @@ import styles from "@/styles/header.module.scss";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import ChangePassword from "@/app/employee-portal/changepassword/ChangePassword";
+import { authLogout } from "@/lib/utils/authLogout";
 
 export default function Header() {
   const router = useRouter();
@@ -77,7 +78,7 @@ export default function Header() {
 
         <div className={styles.profileWrapper} ref={dropdownRef}>
           <Image
-            src="/images/avatar.png"
+            src="/avatar-default.png"
             alt="User Avatar"
             width={34}
             height={34}
@@ -87,7 +88,6 @@ export default function Header() {
 
           {open && (
             <div className={styles.profileDropdown}>
-              
               {/* ----------------- PROFILE BUTTON ----------------- */}
               <button
                 className={styles.profileItem}
@@ -114,23 +114,16 @@ export default function Header() {
               <button className={styles.profileItem}>
                 <FiHelpCircle className={styles.dropdownIcon} /> Help
               </button>
-
+              
               {/* ----------------- LOGOUT BUTTON ----------------- */}
               <button
                 className={styles.profileItem}
                 onClick={() => {
-                  setOpen(false);
-
-                  //  Clear localStorage
-                  localStorage.clear();
-
-                  //  Delete token cookie
-                  document.cookie = "token=; path=/; max-age=0";
-
-                  //  Redirect to login
-                  router.push("/employee-portal/login");
+                  setOpen(false); // close dropdown
+                  authLogout(); // delete cookies and localStorage
+                  router.replace("/employee-portal/login"); // redirect safely
                 }}
-               >
+              >
                 <FiLogOut className={styles.dropdownIcon} /> Log out
               </button>
             </div>

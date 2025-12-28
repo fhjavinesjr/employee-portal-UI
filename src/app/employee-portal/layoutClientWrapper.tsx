@@ -1,40 +1,30 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/sidebar/Sidebar";
 import Header from "@/components/header/Header";
-import React, { useEffect, useState } from "react";
+import React from "react";
 
-export default function LayoutClientWrapper({ children }: { children: React.ReactNode }) {
+interface LayoutClientWrapperProps {
+  children: React.ReactNode;
+}
+
+export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps) {
   const pathname = usePathname() || "";
-  const router = useRouter();
-  const [ready, setReady] = useState(false); // tracks when we can render
 
-  useEffect(() => {
-    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
-    const publicPages = ["/employee-portal/login", "/employee-portal/registration"];
-
-    if (!loggedIn && !publicPages.includes(pathname)) {
-      router.replace("/employee-portal/login");
-      return; // stop further rendering
-    }
-
-    setReady(true); // safe to render now
-  }, [pathname, router]);
-
-  // Render nothing until ready
-  if (!ready) return null;
-
-  // Hide layout for login and registration
+  // Pages where we want to hide sidebar/header
   const publicPages = ["/employee-portal/login", "/employee-portal/registration"];
   const hideLayout = publicPages.includes(pathname);
 
   if (hideLayout) {
+    // For login/registration: show only content
     return <main style={{ padding: 20 }}>{children}</main>;
   }
 
+  // For protected pages: show sidebar + header
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
+      {/* Sidebar */}
       <div
         style={{
           width: 240,
@@ -48,6 +38,7 @@ export default function LayoutClientWrapper({ children }: { children: React.Reac
         <Sidebar />
       </div>
 
+      {/* Main content with header */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         <Header />
         <main style={{ paddingTop: 10, flex: 1 }}>{children}</main>
