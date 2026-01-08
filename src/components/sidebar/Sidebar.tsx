@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { MenuItem } from "./MenuItem";
 import styles from "@/styles/DashboardSidebar.module.scss";
 import { usePathname } from "next/navigation";
@@ -36,109 +37,97 @@ const menuItems = [
   },
 ];
 
+const essItems = [
+  {
+    label: "Leave Application",
+    path: "/employee-portal/selfservice/LeaveApplication",
+  },
+  {
+    label: "Compensatory Time Off",
+    path: "/employee-portal/selfservice/payoff",
+  },
+  {
+    label: "Overtime Request",
+    path: "/employee-portal/selfservice/overtime",
+  },
+  {
+    label: "Time Correction",
+    path: "/employee-portal/selfservice/TimeCorrection",
+  },
+  {
+    label: "Official Engagement",
+    path: "/employee-portal/selfservice/OfficialEngagement",
+  },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
-  const [openESS, setOpenESS] = useState(false);
+
+  const isESSRoute = pathname?.startsWith("/employee-portal/selfservice");
+  const [openESS, setOpenESS] = useState(isESSRoute);
+
+  // Keep ESS open when navigating inside self-service
+  useEffect(() => {
+    if (isESSRoute) setOpenESS(true);
+  }, [isESSRoute]);
 
   return (
-    <>
-      <nav
-        className={styles.Sidebar}
-        role="navigation"
-        aria-label="Main navigation"
-      >
-        <div className={styles.brand}>
-          <div className={styles.brandName}>
-            EMPLOYEE
-            <br />
-            PORTAL
-          </div>
+    <nav
+      className={styles.Sidebar}
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      <div className={styles.brand}>
+        <div className={styles.brandName}>
+          EMPLOYEE
+          <br />
+          PORTAL
         </div>
+      </div>
 
-        <div className={styles.menuSection}>
-          {menuItems.map((item) => (
-            <MenuItem
-              key={item.id}
-              icon={item.icon}
-              label={item.label}
-              goto={item.goto}
-              isActive={pathname === item.goto}
-              onClick={() => {}}
-            />
-          ))}
+      <div className={styles.menuSection}>
+        {menuItems.map((item) => (
+          <MenuItem
+            key={item.id}
+            icon={item.icon}
+            label={item.label}
+            goto={item.goto}
+            isActive={pathname === item.goto}
+            onClick={() => {}}
+          />
+        ))}
 
-          {/* Employee Self Service Dropdown */}
-          <div
-            className={`${styles.menuItem} ${
-              openESS ? styles.activeMenuItem : ""
-            }`}
-            onClick={() => setOpenESS(!openESS)}
-          >
-            <MdOutlineMiscellaneousServices className={styles.menuIcon} />
-            <span className={styles.menuLabel}>Employee Self Service</span>
-            <span className={styles.dropdownArrow}>{openESS ? "▸" : "▾"}</span>
+        {/* Employee Self Service */}
+        <div
+          className={`${styles.menuItem} ${
+            openESS ? styles.activeMenuItem : ""
+          }`}
+          onClick={() => setOpenESS((prev) => !prev)}
+        >
+          <MdOutlineMiscellaneousServices className={styles.menuIcon} />
+          <span className={styles.menuLabel}>Employee Self Service</span>
+          <span className={styles.dropdownArrow}>{openESS ? "▸" : "▾"}</span>
 
-            {openESS && (
-              <div className={styles.dropdownMenu}>
-                {/* Leave Application -> modal trigger */}
-                <a
-                  href="/employee-portal/selfservice/LeaveApplication"
+          {openESS && (
+            <div className={styles.dropdownMenu}>
+              {essItems.map((item) => (
+                <Link
+                  key={item.path}
+                  href={item.path}
                   className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/LeaveApplication"
+                    pathname === item.path
                       ? styles.activeSubMenuItem
                       : ""
                   }`}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Leave Application
-                </a>
-
-                <a
-                  href="/employee-portal/selfservice/payoff"
-                  className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/payoff"
-                      ? styles.activeSubMenuItem
-                      : ""
-                  }`}
-                >
-                  Compensatory Time Off
-                </a>
-                <a
-                  href="/employee-portal/selfservice/overtime"
-                  className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/overtime"
-                      ? styles.activeSubMenuItem
-                      : ""
-                  }`}
-                >
-                  Overtime Request
-                </a>
-                <a
-                  href="/employee-portal/selfservice/TimeCorrection"
-                  className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/TimeCorrection"
-                      ? styles.activeSubMenuItem
-                      : ""
-                  }`}
-                >
-                  Time Correction
-                </a>
-
-                <a
-                  href="/employee-portal/selfservice/OfficialEngagement"
-                  className={`${styles.subMenuItem} ${
-                    pathname === "/employee-portal/selfservice/OfficialEngagement"
-                      ? styles.activeSubMenuItem
-                      : ""
-                  }`}
-                >
-                  Official Engagement
-                </a>
-              </div>
-            )}
-          </div>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      </nav>
-    </>
+      </div>
+    </nav>
   );
 }
