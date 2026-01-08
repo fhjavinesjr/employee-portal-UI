@@ -79,9 +79,11 @@ export default function LoginPage() {
       // Identify current employee
       const currentEmp = employees.find((emp) => emp.employeeNo === employeeNo);
       if (currentEmp) {
+        localStorageUtil.setEmployeeId(currentEmp.employeeId);
         localStorageUtil.setEmployeeNo(currentEmp.employeeNo);
         localStorageUtil.setEmployeeFullname(currentEmp.fullName);
         localStorageUtil.setEmployeeRole(currentEmp.role);
+        localStorageUtil.setBiometricNo(currentEmp.biometricNo);
       }
 
       // Success alert & redirect

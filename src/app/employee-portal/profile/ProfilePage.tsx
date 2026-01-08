@@ -1,97 +1,119 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { FaCamera } from "react-icons/fa";
+
 import Ustyles from "@/styles/userprofile.module.scss";
 import modalStyles from "@/styles/Modal.module.scss";
 
-export default function ProfilePage() {
-  const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+import { localStorageUtil } from "@/lib/utils/localStorageUtil";
+import { fetchPersonalData } from "@/lib/services/api";
+import { PersonalData } from "@/lib/types/PersonalData";
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64Image = e.target?.result?.toString() || null;
-        setUploadedFile(base64Image);
-      };
-      reader.readAsDataURL(file);
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<PersonalData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const employeeId = localStorageUtil.getEmployeeId();
+
+    if (!employeeId) {
+      return;
     }
-  };
+
+    fetchPersonalData(employeeId)
+      .then(setProfile)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <div className={modalStyles.Modal}>Loading profile...</div>;
+  }
+
+  if (!profile) {
+    return <div className={modalStyles.Modal}>Profile not found</div>;
+  }
+
+  const fullName = `${profile.firstname} ${profile.middlename} ${profile.surname}`;
+  const biometricNo = localStorageUtil.getBiometricNo();
+  const employeeNo = localStorageUtil.getEmployeeNo();
+
+  const profileImage =
+    (profile.employeePicture
+      ? `data:image/jpeg;base64,${profile.employeePicture}`
+      : "/default-avatar.jpg");
 
   return (
     <div id="Profile" className={modalStyles.Modal}>
       <div className={modalStyles.modalContent}>
 
-        {/* Title Section */}
+        {/* Header */}
         <div className={modalStyles.modalHeader}>
           <h2 className={modalStyles.mainTitle}>Profile</h2>
         </div>
 
-        {/* Form Section */}
         <form className={modalStyles.modalBody}>
 
           {/* Profile Header */}
           <div className={Ustyles.ProfileWrapper}>
             <div className={Ustyles.profilePictureContainer}>
               <Image
-                src={uploadedFile || "/default-avatar.jpg"}
-                width={150}
-                height={150}
+                src={profileImage}
+                width={155}
+                height={155}
                 alt="Profile"
                 className={Ustyles.profilePicture}
               />
 
-              <button
+              {/* <button
                 type="button"
                 className={Ustyles.uploadButton}
                 onClick={() => document.getElementById("fileInput")?.click()}
-              >
-                <FaCamera />
-              </button>
+              > */}
+                {/* <FaCamera /> */}
+              {/* </button> */}
 
-              <input
+              {/* <input
                 type="file"
                 id="fileInput"
                 accept="image/*"
                 onChange={handleFileUpload}
-                style={{ display: "none" }}
-              />
+                hidden
+              /> */}
             </div>
 
             <div className={Ustyles.userInfo}>
-              <h2 className={Ustyles.name}>Dan Joseph G. Haban</h2>
-              <p className={Ustyles.email}>danjosephhaban@gmail.com</p>
+              <h2 className={Ustyles.name}>{fullName}</h2>
+              <p className={Ustyles.email}>{profile.email}</p>
             </div>
           </div>
 
-          {/* Grid Form Section */}
+          {/* Info Grid */}
           <div className={Ustyles.formGrid}>
             <div className={Ustyles.formGroup}>
               <label>Employee No.</label>
-              <p className={Ustyles.staticField}>001</p>
+              <p className={Ustyles.staticField}>{employeeNo}</p>
             </div>
 
             <div className={Ustyles.formGroup}>
               <label>Biometric No.</label>
-              <p className={Ustyles.staticField}>BJ-77821</p>
+              <p className={Ustyles.staticField}>{biometricNo}</p>
             </div>
 
             <div className={Ustyles.formGroup}>
               <label>Full Name</label>
-              <p className={Ustyles.staticField}>Dan Joseph G. Haban</p>
+              <p className={Ustyles.staticField}>{fullName}</p>
             </div>
 
             <div className={Ustyles.formGroup}>
               <label>Mobile No.</label>
-              <p className={Ustyles.staticField}>0969-999-6789</p>
+              <p className={Ustyles.staticField}>{profile.mobileNo}</p>
             </div>
 
             <div className={Ustyles.formGroup}>
               <label>Email Address</label>
-              <p className={Ustyles.staticField}>danjosephhaban@gmail.com</p>
+              <p className={Ustyles.staticField}>{profile.email}</p>
             </div>
           </div>
 
