@@ -11,4 +11,5 @@ export const authLogout = () => {
   localStorage.removeItem("employeeNo");
   localStorage.removeItem("employeeFullname");
   localStorage.removeItem("employeeRole");
+  localStorage.clear();
 };

@@ -1,49 +1,77 @@
 "use client";
+
 import React, { useState } from "react";
 import Swal from "sweetalert2";
+
 import styles from "@/styles/changePassword.module.scss";
 import modalStyles from "@/styles/Modal.module.scss";
+import { useRouter } from "next/navigation";
+import { localStorageUtil } from "@/lib/utils/localStorageUtil";
+import { updateEmployeePassword } from "@/lib/services/api";
+import { authLogout } from "@/lib/utils/authLogout";
 
 export default function ChangePassword() {
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [employeePassword, setEmployeePassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleChangePassword = () => {
-    if (!currentPassword || !newPassword || !confirmNewPassword) {
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "Please fill in all fields!",
-      });
+  const handleChangePassword = async () => {
+    if (!currentPassword || !employeePassword || !confirmNewPassword) {
+      Swal.fire("Oops...", "Please fill in all fields!", "error");
       return;
     }
 
-    if (newPassword !== confirmNewPassword) {
-      Swal.fire({
-        icon: "error",
-        title: "Oops...",
-        text: "New passwords do not match!",
-      });
+    if (employeePassword !== confirmNewPassword) {
+      Swal.fire("Oops...", "New passwords do not match!", "error");
       return;
     }
 
-    Swal.fire({
+    const result = await Swal.fire({
       title: "Are you sure?",
       text: "Do you want to change your password?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
       confirmButtonText: "Yes, change it!",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        Swal.fire("Changed!", "Your password has been changed.", "success");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmNewPassword("");
-      }
     });
+
+    if (!result.isConfirmed) return;
+
+    const employeeId = localStorageUtil.getEmployeeId();
+
+    if (!employeeId) {
+      Swal.fire("Error", "Employee not found. Please log in again.", "error");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      await updateEmployeePassword(
+        employeeId,
+        currentPassword,
+        employeePassword
+      );
+
+      Swal.fire("Changed!", "Your password has been changed.", "success");
+
+      // Logout and redirect to login
+      authLogout();
+      router.push("/employee-portal/login");
+
+      setCurrentPassword("");
+      setEmployeePassword("");
+      setConfirmNewPassword("");
+    } catch (error: any) {
+      Swal.fire(
+        "Failed",
+        error.message || "Unable to change password",
+        "error"
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -55,7 +83,7 @@ export default function ChangePassword() {
           <h2 className={modalStyles.mainTitle}>Change Password</h2>
         </div>
 
-        {/* Modal Body  */}
+        {/* Body */}
         <div className={modalStyles.modalBody}>
 
           <div className={styles.field}>
@@ -65,7 +93,7 @@ export default function ChangePassword() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder="Enter current password"
-              required
+              disabled={submitting}
             />
           </div>
 
@@ -73,10 +101,10 @@ export default function ChangePassword() {
             <label>New Password</label>
             <input
               type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              value={employeePassword}
+              onChange={(e) => setEmployeePassword(e.target.value)}
               placeholder="Enter new password"
-              required
+              disabled={submitting}
             />
           </div>
 
@@ -87,12 +115,16 @@ export default function ChangePassword() {
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
               placeholder="Confirm new password"
-              required
+              disabled={submitting}
             />
           </div>
 
-          <button className={styles.button} onClick={handleChangePassword}>
-            Change Password
+          <button
+            className={styles.button}
+            onClick={handleChangePassword}
+            disabled={submitting}
+          >
+            {submitting ? "Changing..." : "Change Password"}
           </button>
 
         </div>
