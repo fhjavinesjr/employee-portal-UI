@@ -63,12 +63,14 @@ export default function ChangePassword() {
       setCurrentPassword("");
       setEmployeePassword("");
       setConfirmNewPassword("");
-    } catch (error: any) {
-      Swal.fire(
-        "Failed",
-        error.message || "Unable to change password",
-        "error"
-      );
+    } catch (error: unknown) {
+      let message = "Unable to change password";
+
+      if (error instanceof Error) {
+        message = error.message;
+      }
+
+      Swal.fire("Failed", message, "error");
     } finally {
       setSubmitting(false);
     }
