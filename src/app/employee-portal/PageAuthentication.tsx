@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { AUTH_CONFIG } from "@/lib/utils/auth.config";
+import { AUTH_CONFIG } from "@/lib/utils/authConfig";
 import { getCookie, setCookie, deleteCookie } from "@/lib/utils/cookies";
 
 interface PageAuthenticationProps {
