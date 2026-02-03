@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { Employee } from "@/lib/types/Employee";
-import { AUTH_CONFIG } from "@/lib/utils/auth.config";
+import { AUTH_CONFIG } from "@/lib/utils/authConfig";
 import { setCookie } from "@/lib/utils/cookies";
 
 const { INACTIVITY_LIMIT } = AUTH_CONFIG;
@@ -55,11 +55,7 @@ export default function LoginPage() {
       const now = Date.now();
       
       setCookie(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true", INACTIVITY_LIMIT);
-      setCookie(
-        AUTH_CONFIG.COOKIE.LAST_ACTIVITY,
-        now.toString(),
-        INACTIVITY_LIMIT
-      );
+      setCookie(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString(),INACTIVITY_LIMIT);
 
       localStorage.setItem(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true");
       localStorage.setItem(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString());

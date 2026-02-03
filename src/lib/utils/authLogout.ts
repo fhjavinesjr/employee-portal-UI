@@ -1,15 +1,9 @@
-export const authLogout = () => {
-  // Delete cookies
-  document.cookie = "isLoggedIn=; path=/; max-age=0";
-  document.cookie = "lastActivity=; path=/; max-age=0";
-  document.cookie = "authToken=; path=/; max-age=0";
+import { AUTH_CONFIG } from "@/lib/utils/authConfig";
+import { deleteCookie } from "@/lib/utils/cookies";
 
-  // Clear localStorage
-  localStorage.removeItem("isLoggedIn");
-  localStorage.removeItem("lastActivity");
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("employeeNo");
-  localStorage.removeItem("employeeFullname");
-  localStorage.removeItem("employeeRole");
-  localStorage.clear();
+export const authLogout = () => {
+  // Delete all cookies defined in AUTH_CONFIG
+  Object.values(AUTH_CONFIG.COOKIE).forEach(deleteCookie);
+
+  localStorage.setItem("LOGOUT_SIGNAL", Date.now().toString());
 };

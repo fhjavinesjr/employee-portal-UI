@@ -7,9 +7,15 @@ export const AUTH_CONFIG = {
     TOKEN: "authToken",
   },
 
-  PUBLIC_PAGES: [
+   PUBLIC_PAGES: [
+    "/administrative/login",
+    "/administrative/registration",
     "/employee-portal/login",
     "/employee-portal/registration",
+    "/hr-management/login",
+    "/hr-management/registration",
+    "/time-keeping/login",
+    "/time-keeping/registration",
   ],
 
   INACTIVITY_LIMIT: 60, // seconds

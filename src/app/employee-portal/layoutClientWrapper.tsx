@@ -25,10 +25,10 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Sidebar */}
-      <div
+      <aside
         style={{
           width: 240,
-          flex: "0 0 240px",
+          flexShrink: 0,
           position: "sticky",
           top: 0,
           height: "100vh",
@@ -36,7 +36,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         }}
       >
         <Sidebar />
-      </div>
+      </aside>
 
       {/* Main content with header */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
