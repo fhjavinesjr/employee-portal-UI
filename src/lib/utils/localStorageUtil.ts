@@ -29,4 +29,13 @@ export const localStorageUtil = {
 
   setEmployeeRole: (userRole: string) => localStorage.setItem("userRole", userRole),
   getEmployeeRole: () => localStorage.getItem("userRole"),
+
+  setEmployeeId: (employeeId: number) => localStorage.setItem("employeeId", employeeId.toString()),
+  getEmployeeId: (): number | null => {
+    const id = localStorage.getItem("employeeId");
+    return id ? Number(id) : null;
+  },
+
+  setBiometricNo: (biometricNo: string) => localStorage.setItem("biometricNo", biometricNo),
+  getBiometricNo: () => localStorage.getItem("biometricNo"),
 };
