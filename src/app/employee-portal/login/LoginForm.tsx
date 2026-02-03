@@ -55,11 +55,7 @@ export default function LoginPage() {
       const now = Date.now();
       
       setCookie(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true", INACTIVITY_LIMIT);
-      setCookie(
-        AUTH_CONFIG.COOKIE.LAST_ACTIVITY,
-        now.toString(),
-        INACTIVITY_LIMIT
-      );
+      setCookie(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString(),INACTIVITY_LIMIT);
 
       localStorage.setItem(AUTH_CONFIG.COOKIE.IS_LOGGED_IN, "true");
       localStorage.setItem(AUTH_CONFIG.COOKIE.LAST_ACTIVITY, now.toString());
