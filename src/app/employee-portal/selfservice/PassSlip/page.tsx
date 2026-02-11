@@ -2,12 +2,12 @@
 
 import React from "react";
 import Main from "@/app/employee-portal/main/Main";
-import TimeCorrection from "./TimeCorrection";
+import PassSlip from "./passSlip";
 
-export default function TimeCorrectionPage() {
+export default function PassSlipPage() {
   return (
     <Main>
-      <TimeCorrection />
+      <PassSlip />
     </Main>
   );
 }

@@ -32,7 +32,9 @@ export default function OfficialEngagement() {
   const officialTypes = ["Official Business", "Official Time"];
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -74,7 +76,9 @@ export default function OfficialEngagement() {
               onChange={handleChange}
               required
             >
-              <option value="">Select</option>
+              <option value="" disabled>
+                Select
+              </option>
               {officialTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}

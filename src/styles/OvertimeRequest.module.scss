@@ -1,0 +1,79 @@
+
+
+.officialEngagementTable {
+  margin-top: 20px;
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 40px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  
+}
+
+.tableTitle {
+    background-color: #f1f1f1; 
+    color: #212529;
+    text-align: center;
+    font-weight: 600;
+    padding: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #ced4da; 
+    margin: 0;
+    border-top-left-radius: 12px; 
+    border-top-right-radius: 12px;
+    border: 1px solid #ccc; 
+  }
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 8px
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  overflow: hidden;
+  text-align: center;
+  
+ 
+
+  th,
+  td {
+    border: 1px solid #ccc;
+    padding: 10px 12px;
+  }
+
+  th {
+    background-color: #f1f1f1;
+    font-weight: bold;
+  }
+   thead {
+      background-color: #f1f1f1; /* ✅ light gray header */
+      font-weight: 600;
+      
+    }
+
+  tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+
+
+}
+
+.optionBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  transition: transform 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.2);
+  }
+}

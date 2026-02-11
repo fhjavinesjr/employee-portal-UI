@@ -1,0 +1,78 @@
+/* compensatoryTimeOff.module.scss */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+
+  label {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #333;
+  }
+
+  input,
+  select,
+  textarea {
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      border-color: #2f4da1;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(47, 77, 161, 0.15);
+    }
+  }
+
+  input,
+  select {
+    width: 30%;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+  }
+}
+
+/* Buttons */
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.submitBtn {
+  width: 10%;
+  background-color: #28a745;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.9rem;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #218838;
+  }
+}
+
+.clearBtn {
+  width: 10%;
+  background-color: #adb5bd;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  padding: 0.9rem;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #868e96;
+  }
+}
