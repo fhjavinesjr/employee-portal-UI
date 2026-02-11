@@ -2,12 +2,12 @@
 
 import React from "react";
 import Main from "@/app/employee-portal/main/Main";
-import TimeCorrection from "./TimeCorrection";
+import OvertimeRequest from "./overtimeRequest";
 
-export default function TimeCorrectionPage() {
+export default function OverTimeRequestPage() {
   return (
     <Main>
-      <TimeCorrection />
+      <OvertimeRequest />
     </Main>
   );
 }

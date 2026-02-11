@@ -10,6 +10,7 @@ import { FaHome, FaUserFriends } from "react-icons/fa";
 import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
 import { HiViewGrid } from "react-icons/hi";
 
+
 const menuItems = [
   {
     id: 1,
@@ -44,11 +45,11 @@ const essItems = [
   },
   {
     label: "Compensatory Time Off",
-    path: "/employee-portal/selfservice/payoff",
+    path: "/employee-portal/selfservice/CompensatoryTimeOff",
   },
   {
     label: "Overtime Request",
-    path: "/employee-portal/selfservice/overtime",
+    path: "/employee-portal/selfservice/OvertimeRequest",
   },
   {
     label: "Time Correction",
@@ -58,6 +59,10 @@ const essItems = [
     label: "Official Engagement",
     path: "/employee-portal/selfservice/OfficialEngagement",
   },
+  {
+    label: "Pass Slip",
+    path: "/employee-portal/selfservice/PassSlip",
+  }
 ];
 
 export default function Sidebar() {
@@ -66,10 +71,26 @@ export default function Sidebar() {
   const isESSRoute = pathname?.startsWith("/employee-portal/selfservice");
   const [openESS, setOpenESS] = useState(isESSRoute);
 
-  // Keep ESS open when navigating inside self-service
-  useEffect(() => {
-    if (isESSRoute) setOpenESS(true);
-  }, [isESSRoute]);
+  // Keep ESS open if pathname is inside self-service
+useEffect(() => {
+  setOpenESS(isESSRoute);
+}, [isESSRoute]);
+
+// Arrow:
+<span className={styles.dropdownArrow}>{openESS ? "▾" : "▸"}</span>
+
+// Submenu Links:
+{essItems.map((item) => (
+  <Link
+    key={item.path}
+    href={item.path}
+    className={`${styles.subMenuItem} ${
+      pathname === item.path ? styles.activeSubMenuItem : ""
+    }`}
+  >
+    {item.label}
+  </Link>
+))}
 
   return (
     <nav
