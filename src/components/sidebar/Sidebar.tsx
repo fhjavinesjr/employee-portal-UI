@@ -22,19 +22,19 @@ const menuItems = [
     id: 2,
     icon: <HiViewGrid />,
     label: "Administrative",
-    goto: "/employee-portal/admin",
+    goto: "http://localhost:3082/administrative/dashboard",
   },
   {
     id: 3,
     icon: <FaUserFriends />,
     label: "HR Management",
-    goto: "/employee-portal/hr",
+    goto: "http://localhost:3085/hr-management/welcomepage",
   },
   {
     id: 4,
     icon: <MdAccessTime />,
     label: "Timekeeping",
-    goto: "/employee-portal/timekeeping",
+    goto: "http://localhost:3083/time-keeping/dashboard",
   },
 ];
 
