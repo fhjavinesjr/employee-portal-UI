@@ -4,26 +4,64 @@ import React, { useState } from "react";
 import modalStyles from "@/styles/Modal.module.scss";
 import styles from "@/styles/LeaveApplication.module.scss";
 import Tstyle from "@/styles/TimeCorrection.module.scss";
+import to12HourFormat from "@/lib/utils/convert24To12HrFormat";
 
 interface TimeCorrectionProps {
   onClose?: () => void; // optional close handler
 }
 
+type TimeField = { hour: string; minute: string };
+
+const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+
 export default function TimeCorrection({ onClose }: TimeCorrectionProps) {
   const [form, setForm] = useState({
     date: "",
-    timeIn: "",
-    breakOut: "",
-    breakIn: "",
-    timeOut: "",
+    timeIn: { hour: "08", minute: "00" } as TimeField,
+    breakOut: { hour: "", minute: "" } as TimeField,
+    breakIn: { hour: "", minute: "" } as TimeField,
+    timeOut: { hour: "17", minute: "00" } as TimeField,
     details: "",
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  const setTimeField = (field: "timeIn" | "breakOut" | "breakIn" | "timeOut", part: "hour" | "minute", value: string) => {
+    setForm({ ...form, [field]: { ...form[field], [part]: value } });
+  };
+
+  const to12 = (t: TimeField) =>
+    t.hour && t.minute ? to12HourFormat(`${t.hour}:${t.minute}`) : "";
+
+  const renderTimeSelect = (
+    field: "timeIn" | "breakOut" | "breakIn" | "timeOut"
   ) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    const val = form[field] as TimeField;
+    return (
+      <div>
+        <div className={Tstyle.timeGroup}>
+          <select
+            className={Tstyle.timeSelect}
+            value={val.hour}
+            onChange={(e) => setTimeField(field, "hour", e.target.value)}
+          >
+            <option value="">--</option>
+            {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <span className={Tstyle.timeColon}>:</span>
+          <select
+            className={Tstyle.timeSelect}
+            value={val.minute}
+            onChange={(e) => setTimeField(field, "minute", e.target.value)}
+          >
+            <option value="">--</option>
+            {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        {val.hour && val.minute && (
+          <span className={Tstyle.time12Label}>{to12(val)}</span>
+        )}
+      </div>
+    );
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -50,53 +88,29 @@ export default function TimeCorrection({ onClose }: TimeCorrectionProps) {
               id="date"
               name="date"
               value={form.date}
-              onChange={handleChange}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
               required
             />
           </div>
 
           <div className={Tstyle.formRow}>
-            <label htmlFor="timeIn">Time In</label>
-            <input
-              type="time"
-              id="timeIn"
-              name="timeIn"
-              value={form.timeIn}
-              onChange={handleChange}
-            />
+            <label>Time In</label>
+            {renderTimeSelect("timeIn")}
           </div>
 
           <div className={Tstyle.formRow}>
-            <label htmlFor="breakOut">Break Out</label>
-            <input
-              type="time"
-              id="breakOut"
-              name="breakOut"
-              value={form.breakOut}
-              onChange={handleChange}
-            />
+            <label>Break Out <span style={{ fontWeight: 400, fontSize: "0.82rem", color: "#6b7280" }}>(optional)</span></label>
+            {renderTimeSelect("breakOut")}
           </div>
 
           <div className={Tstyle.formRow}>
-            <label htmlFor="breakIn">Break In</label>
-            <input
-              type="time"
-              id="breakIn"
-              name="breakIn"
-              value={form.breakIn}
-              onChange={handleChange}
-            />
+            <label>Break In <span style={{ fontWeight: 400, fontSize: "0.82rem", color: "#6b7280" }}>(optional)</span></label>
+            {renderTimeSelect("breakIn")}
           </div>
 
           <div className={Tstyle.formRow}>
-            <label htmlFor="timeOut">Time Out</label>
-            <input
-              type="time"
-              id="timeOut"
-              name="timeOut"
-              value={form.timeOut}
-              onChange={handleChange}
-            />
+            <label>Time Out</label>
+            {renderTimeSelect("timeOut")}
           </div>
 
            {/* Details */}
@@ -105,7 +119,7 @@ export default function TimeCorrection({ onClose }: TimeCorrectionProps) {
             <textarea
               name="details"
               value={form.details}
-              onChange={handleChange}
+              onChange={(e) => setForm({ ...form, details: e.target.value })}
               placeholder="Enter details..."
               required
             />

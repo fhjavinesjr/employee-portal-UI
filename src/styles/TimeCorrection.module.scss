@@ -89,3 +89,57 @@
   }
 }
 
+/* Time picker dropdown styles */
+.timeGroup {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 4px 8px;
+  width: fit-content;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+  min-width: 180px;
+
+  &:focus-within {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+  }
+}
+
+.timeSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 14px;
+  min-width: 60px;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.timeColon {
+  margin: 0 4px;
+  font-weight: bold;
+  color: #666;
+}
+
+.time12Label {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
