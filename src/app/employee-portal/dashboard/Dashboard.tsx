@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   CalendarDays,
   UserCheck,
@@ -9,12 +9,46 @@ import {
   Megaphone,
 } from "lucide-react";
 import styles from "@/styles/DashboardPage.module.scss";
+import { localStorageUtil } from "@/lib/utils/localStorageUtil";
+import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
+
+const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+
+interface LeaveBalanceDTO {
+  vacationLeaveBalance: number | null;
+  sickLeaveBalance: number | null;
+  splBalance: number | null;
+  forcedLeaveBalance: number | null;
+}
 
 export default function Dashboard() {
+  const [leaveBalance, setLeaveBalance] = useState<LeaveBalanceDTO | null>(null);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+
+  useEffect(() => {
+    const empId = localStorageUtil.getEmployeeId();
+    if (!empId) { setIsBalanceLoading(false); return; }
+
+    fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-balance/current/${empId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setLeaveBalance(data ?? null))
+      .catch(() => setLeaveBalance(null))
+      .finally(() => setIsBalanceLoading(false));
+  }, []);
+
+  const fmt = (v: number | null | undefined) =>
+    v == null ? "—" : v.toFixed(3);
+
+  const leaveBalanceValue = isBalanceLoading
+    ? "Loading…"
+    : leaveBalance
+      ? `VL: ${fmt(leaveBalance.vacationLeaveBalance)} | SL: ${fmt(leaveBalance.sickLeaveBalance)}`
+      : "Unavailable";
+
   const summaryData = [
     {
       title: "Leave Balance",
-      value: "Vacation: 5 | Sick: 3",
+      value: leaveBalanceValue,
       icon: <CalendarDays size={24} />,
     },
     {
