@@ -44,16 +44,16 @@ const essItems = [
     path: "/employee-portal/selfservice/LeaveApplication",
   },
   {
-    label: "Compensatory Time Off",
-    path: "/employee-portal/selfservice/CompensatoryTimeOff",
-  },
-  {
     label: "Overtime Request",
     path: "/employee-portal/selfservice/OvertimeRequest",
   },
   {
-    label: "Time Correction",
-    path: "/employee-portal/selfservice/TimeCorrection",
+    label: "Compensatory Overtime Credit",
+    path: "/employee-portal/selfservice/Compensatory-Overtime-Credits",
+  },
+  {
+    label: "Compensatory Time Off",
+    path: "/employee-portal/selfservice/CompensatoryTimeOff",
   },
   {
     label: "Official Engagement",
@@ -62,7 +62,11 @@ const essItems = [
   {
     label: "Pass Slip",
     path: "/employee-portal/selfservice/PassSlip",
-  }
+  },
+  {
+    label: "Time Correction",
+    path: "/employee-portal/selfservice/TimeCorrection",
+  },
 ];
 
 export default function Sidebar() {

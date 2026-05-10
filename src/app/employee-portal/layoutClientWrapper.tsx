@@ -23,7 +23,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
 
   // For protected pages: show sidebar + header
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <>
+      <div style={{ display: "flex", minHeight: "100vh" }}>
       {/* Sidebar */}
       <aside
         style={{
@@ -44,5 +45,10 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         <main style={{ paddingTop: 10, flex: 1 }}>{children}</main>
       </div>
     </div>
+    <footer style={{ position: "fixed", bottom: 12, right: 16, fontSize: 9, color: "#9ca3af", textAlign: "right", lineHeight: 1.5, pointerEvents: "none", zIndex: 999 }}>
+      <div>Version 1.0.0 | {new Date().getFullYear()} &copy; Bayanihan GovSuite. All Rights Reserved.</div>
+      <div>A product of VERF IT Solutions. In partnership with ISOF and authorized distribution partners.</div>
+    </footer>
+    </>
   );
 }

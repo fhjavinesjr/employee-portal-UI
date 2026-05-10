@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import styles from "@/styles/LeaveApplication.module.scss";
 import modalStyles from "@/styles/Modal.module.scss";
 import LeaveApplicationTable from "@/components/tables/leaveapplicationTable";
+import LeaveMonetizationTable, { MonetizationRecord } from "@/components/tables/leaveMonetizationTable";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
@@ -263,6 +264,16 @@ interface ApiLeaveApplicationDTO {
   recommendationMessage: string | null;
   approvedStatus: string | null;
   approvalMessage: string | null;
+  recommendingApprovalById?: number | null;
+  approvedById?: number | null;
+}
+
+interface EmployeeBasicInfo {
+  employeeId: number;
+  fullName?: string;
+  firstname?: string;
+  lastname?: string;
+  suffix?: string;
 }
 
 interface TableLeaveData {
@@ -274,7 +285,29 @@ interface TableLeaveData {
   commutation: string;
   details: string;
   status: string;
+  recommendationStatus: string | null;
   approvedStatus: string | null;
+  recommendingOfficer: string;
+  approvedBy: string;
+}
+
+interface ApiMonetizationDTO {
+  leaveMonetizationId: number;
+  employeeId: number;
+  dateFiled: string | null;
+  noOfDaysSL: number | null;
+  noOfDaysVL: number | null;
+  totalDays: number | null;
+  slBalanceBefore: number | null;
+  vlBalanceBefore: number | null;
+  slBalanceAfter: number | null;
+  vlBalanceAfter: number | null;
+  reason: string | null;
+  recommendationStatus: string | null;
+  approvalStatus: string | null;
+  payrollIncluded: boolean | null;
+  recommendedById: number | null;
+  approvedById: number | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -286,8 +319,9 @@ const fmt = (v: number | null | undefined): string =>
 function balanceLabelFor(leaveType: string): { label: string; key: keyof LeaveBalanceDTO } | null {
   switch (leaveType) {
     case LEAVE_TYPES.VACATION:
-    case LEAVE_TYPES.FORCED:
       return { label: "VL Available", key: "vacationLeaveBalance" };
+    case LEAVE_TYPES.FORCED:
+      return { label: "Forced Leave Remaining (this year)", key: "forcedLeaveBalance" };
     case LEAVE_TYPES.SICK:
       return { label: "SL Available", key: "sickLeaveBalance" };
     case LEAVE_TYPES.SPECIAL_PRIVILEGE:
@@ -320,13 +354,22 @@ export default function LeaveApplication() {
     noOfDays: "",
   };
 
+  const initialMonetizationForm = { dateFiled: today, noOfDaysSL: "", noOfDaysVL: "", reason: "" };
+
   const [form, setForm] = useState(initialFormState);
-  const [activeTab, setActiveTab] = useState<"table" | "apply">("table");
+  const [activeTab, setActiveTab] = useState<"table" | "monetization" | "apply">("table");
   const [records, setRecords] = useState<TableLeaveData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [balance, setBalance] = useState<LeaveBalanceDTO | null>(null);
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
+  const [monetizationRecords, setMonetizationRecords] = useState<MonetizationRecord[]>([]);
+  const [isMonetizationLoading, setIsMonetizationLoading] = useState(false);
+  const [showMonetizationForm, setShowMonetizationForm] = useState(false);
+  const [isMonetizationSubmitting, setIsMonetizationSubmitting] = useState(false);
+  const [editingMonetizationId, setEditingMonetizationId] = useState<number | null>(null);
+  const [monetizationForm, setMonetizationForm] = useState(initialMonetizationForm);
 
   const leaveTypes = Object.values(LEAVE_TYPES);
 
@@ -346,7 +389,22 @@ export default function LeaveApplication() {
     }
   }, []);
 
-  const fetchRecords = useCallback(async (empId: number) => {
+  const fetchEmployeeNames = useCallback(async (): Promise<Map<number, string>> => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/employees/basicInfo`);
+      if (!res.ok) return new Map();
+      const data: EmployeeBasicInfo[] = await res.json();
+      const map = new Map<number, string>();
+      data.forEach((emp) => {
+        const name = emp.fullName?.trim() ||
+          [emp.firstname, emp.lastname, emp.suffix].filter(Boolean).join(" ").trim();
+        if (emp.employeeId && name) map.set(emp.employeeId, name);
+      });
+      return map;
+    } catch { return new Map(); }
+  }, []);
+
+  const fetchRecords = useCallback(async (empId: number, nameMap: Map<number, string>) => {
     setIsLoading(true);
     try {
       const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-application/get-all/${empId}`);
@@ -364,7 +422,14 @@ export default function LeaveApplication() {
             commutation: d.commutation ?? "",
             details: d.details ?? "",
             status: d.status,
+            recommendationStatus: d.recommendationStatus ?? null,
             approvedStatus: d.approvedStatus ?? null,
+            recommendingOfficer: d.recommendingApprovalById
+              ? (nameMap.get(d.recommendingApprovalById) ?? "—")
+              : "—",
+            approvedBy: d.approvedById
+              ? (nameMap.get(d.approvedById) ?? "—")
+              : "—",
           }))
       );
     } catch {
@@ -374,12 +439,62 @@ export default function LeaveApplication() {
     }
   }, []);
 
+  const refreshRecords = useCallback(async (empId: number) => {
+    const nameMap = await fetchEmployeeNames();
+    await fetchRecords(empId, nameMap);
+  }, [fetchEmployeeNames, fetchRecords]);
+
+  const fetchMonetizationRecords = useCallback(async (empId: number) => {
+    setIsMonetizationLoading(true);
+    try {
+      const nm = new Map<number, string>();
+      try {
+        const nRes = await fetchWithAuth(`${API_BASE_URL_HRM}/api/employees/basicInfo`);
+        if (nRes.ok) {
+          const nData: EmployeeBasicInfo[] = await nRes.json();
+          nData.forEach((e) => {
+            const name = e.fullName?.trim() ||
+              [e.firstname, e.lastname, e.suffix].filter(Boolean).join(" ").trim();
+            if (e.employeeId && name) nm.set(e.employeeId, name);
+          });
+        }
+      } catch {}
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-monetization/get-all/${empId}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data: ApiMonetizationDTO[] = await res.json();
+      setMonetizationRecords(
+        data.map((d) => ({
+          id: d.leaveMonetizationId,
+          dateFiled: d.dateFiled ?? "",
+          noOfDaysSL: d.noOfDaysSL ?? 0,
+          noOfDaysVL: d.noOfDaysVL ?? 0,
+          totalDays: d.totalDays ?? 0,
+          slBalanceBefore: d.slBalanceBefore,
+          vlBalanceBefore: d.vlBalanceBefore,
+          slBalanceAfter: d.slBalanceAfter,
+          vlBalanceAfter: d.vlBalanceAfter,
+          reason: d.reason,
+          recommendationStatus: d.recommendationStatus ?? "Pending",
+          approvalStatus: d.approvalStatus ?? "Pending",
+          payrollIncluded: d.payrollIncluded ?? false,
+          recommendingOfficer: d.recommendedById ? (nm.get(d.recommendedById) ?? "—") : "—",
+          approvedBy: d.approvedById ? (nm.get(d.approvedById) ?? "—") : "—",
+        }))
+      );
+    } catch {
+      Toast.fire({ icon: "error", title: "Could not load monetization records" });
+    } finally {
+      setIsMonetizationLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const empId = localStorageUtil.getEmployeeId();
     if (!empId) return;
-    fetchRecords(empId);
+    refreshRecords(empId);
     fetchBalance(empId);
-  }, [fetchRecords, fetchBalance]);
+    fetchMonetizationRecords(empId);
+  }, [refreshRecords, fetchBalance, fetchMonetizationRecords]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -464,16 +579,20 @@ export default function LeaveApplication() {
         status: "Pending",
       };
 
-      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-application/create`, {
-        method: "POST",
+      const url = editingId !== null
+        ? `${API_BASE_URL_HRM}/api/leave-application/update/${editingId}`
+        : `${API_BASE_URL_HRM}/api/leave-application/create`;
+      const res = await fetchWithAuth(url, {
+        method: editingId !== null ? "PUT" : "POST",
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
 
-      Toast.fire({ icon: "success", title: "Leave application submitted!" });
+      Toast.fire({ icon: "success", title: editingId !== null ? "Leave application updated!" : "Leave application submitted!" });
       setForm(initialFormState);
+      setEditingId(null);
       setActiveTab("table");
-      await fetchRecords(empId);
+      await refreshRecords(empId);
       await fetchBalance(empId);
     } catch (err) {
       Swal.fire("Error", err instanceof Error ? err.message : "Failed to submit.", "error");
@@ -484,12 +603,126 @@ export default function LeaveApplication() {
 
   const handleClear = () => {
     setForm(initialFormState);
+    setEditingId(null);
+    setActiveTab("table");
+  };
+
+  const handleEditLeave = (r: TableLeaveData) => {
+    setEditingId(r.id);
+    setForm({
+      dateFiled: r.dateFiled,
+      leaveType: r.leaveType,
+      from: r.from,
+      to: r.to,
+      commutation: r.commutation || "requested",
+      details: r.details,
+      noOfDays: "",
+    });
+    setActiveTab("apply");
+  };
+
+  const handleDeleteLeave = async (id: number) => {
+    const result = await Swal.fire({
+      title: "Delete this leave application?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Yes, delete it",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-application/delete/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+      Toast.fire({ icon: "success", title: "Leave application deleted" });
+      const empId = localStorageUtil.getEmployeeId();
+      if (empId) { await refreshRecords(empId); fetchBalance(empId); }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Failed to delete", text: String(err) });
+    }
+  };
+
+  const handleMonetizationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const empId = localStorageUtil.getEmployeeId();
+    if (!empId) {
+      Swal.fire("Error", "Session expired. Please log in again.", "error");
+      return;
+    }
+    const noOfDaysSL = parseFloat(monetizationForm.noOfDaysSL) || 0;
+    const noOfDaysVL = parseFloat(monetizationForm.noOfDaysVL) || 0;
+    if (noOfDaysSL + noOfDaysVL <= 0) {
+      Swal.fire("Validation", "Please enter at least some days to monetize.", "warning");
+      return;
+    }
+    setIsMonetizationSubmitting(true);
+    try {
+      const payload = {
+        employeeId: empId,
+        dateFiled: monetizationForm.dateFiled || today,
+        noOfDaysSL,
+        noOfDaysVL,
+        reason: monetizationForm.reason,
+      };
+      const isUpdate = editingMonetizationId !== null;
+      const url = isUpdate
+        ? `${API_BASE_URL_HRM}/api/leave-monetization/update/${editingMonetizationId}`
+        : `${API_BASE_URL_HRM}/api/leave-monetization/create`;
+      const res = await fetchWithAuth(url, {
+        method: isUpdate ? "PUT" : "POST",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      Toast.fire({ icon: "success", title: isUpdate ? "Monetization updated!" : "Monetization request submitted!" });
+      setMonetizationForm(initialMonetizationForm);
+      setEditingMonetizationId(null);
+      setShowMonetizationForm(false);
+      await fetchMonetizationRecords(empId);
+    } catch (err) {
+      Swal.fire("Error", err instanceof Error ? err.message : "Failed to submit.", "error");
+    } finally {
+      setIsMonetizationSubmitting(false);
+    }
+  };
+
+  const handleEditMonetization = (record: MonetizationRecord) => {
+    setMonetizationForm({
+      dateFiled: record.dateFiled,
+      noOfDaysSL: String(record.noOfDaysSL),
+      noOfDaysVL: String(record.noOfDaysVL),
+      reason: record.reason ?? "",
+    });
+    setEditingMonetizationId(record.id);
+    setShowMonetizationForm(true);
+    setActiveTab("monetization");
+  };
+
+  const handleDeleteMonetization = async (record: MonetizationRecord) => {
+    const result = await Swal.fire({
+      title: "Delete Monetization Record?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Yes, delete it",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/leave-monetization/delete/${record.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+      Toast.fire({ icon: "success", title: "Monetization record deleted" });
+      const empId = localStorageUtil.getEmployeeId();
+      if (empId) await fetchMonetizationRecords(empId);
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Failed to delete", text: String(err) });
+    }
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const balInfo = balanceLabelFor(form.leaveType);
   const displayBalance = balInfo && balance ? (balance[balInfo.key] as number | null) : null;
+  const vlForForcedDisplay = form.leaveType === LEAVE_TYPES.FORCED && balance ? balance.vacationLeaveBalance : null;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -534,7 +767,24 @@ export default function LeaveApplication() {
               marginBottom: "-2px",
             }}
           >
-            + File Leave
+            {editingId !== null ? "✏️ Edit Leave" : "+ File Leave"}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab("monetization"); setShowMonetizationForm(false); }}
+            style={{
+              padding: "0.6rem 1.2rem",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              border: "none",
+              borderBottom: activeTab === "monetization" ? "3px solid #2f4da1" : "3px solid transparent",
+              background: "none",
+              color: activeTab === "monetization" ? "#2f4da1" : "#6b7280",
+              cursor: "pointer",
+              marginBottom: "-2px",
+            }}
+          >
+            Leave Monetization
           </button>
         </div>
 
@@ -546,7 +796,124 @@ export default function LeaveApplication() {
             ) : records.length === 0 ? (
               <p style={{ color: "#6b7280", padding: "1rem 0" }}>No leave applications found.</p>
             ) : (
-              <LeaveApplicationTable data={records} />
+              <LeaveApplicationTable data={records} onEdit={handleEditLeave} onDelete={handleDeleteLeave} />
+            )}
+          </div>
+        )}
+
+        {/* ── Leave Monetization tab ── */}
+        {activeTab === "monetization" && (
+          <div className={modalStyles.modalBody}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              {!showMonetizationForm && (
+                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 700, color: "#374151" }}>My Leave Monetization Records</h3>
+              )}
+              {!showMonetizationForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowMonetizationForm(true)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: "#28a745",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: 600,
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  + File Monetization
+                </button>
+              )}
+            </div>
+
+            {showMonetizationForm ? (
+              <form onSubmit={handleMonetizationSubmit} style={{ maxWidth: 480, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <h4 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 700, color: "#1d4ed8" }}>{editingMonetizationId ? "Edit Leave Monetization" : "File Leave Monetization Request"}</h4>
+
+                <div className={styles.formGroup}>
+                  <label>Date Filed</label>
+                  <input
+                    type="date"
+                    className={styles.inputBase}
+                    value={monetizationForm.dateFiled}
+                    readOnly
+                    required
+                    style={{ background: "#f3f4f6", cursor: "not-allowed" }}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>VL Days to Monetize <small style={{ fontWeight: 400, color: "#6b7280" }}>(deducted first per CSC rules)</small></label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={styles.inputBase}
+                    placeholder="0"
+                    value={monetizationForm.noOfDaysVL}
+                    onChange={(e) => setMonetizationForm((f) => ({ ...f, noOfDaysVL: e.target.value }))}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>SL Days to Monetize</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={styles.inputBase}
+                    placeholder="0"
+                    value={monetizationForm.noOfDaysSL}
+                    onChange={(e) => setMonetizationForm((f) => ({ ...f, noOfDaysSL: e.target.value }))}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Total Days <small style={{ fontWeight: 400, color: "#6b7280" }}>(min. 10 required per CSC rules)</small></label>
+                  <input
+                    type="text"
+                    readOnly
+                    className={styles.inputBase}
+                    value={((parseFloat(monetizationForm.noOfDaysSL) || 0) + (parseFloat(monetizationForm.noOfDaysVL) || 0)).toFixed(1)}
+                    style={{ background: "#f9fafb", color: "#374151", fontWeight: 700 }}
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Reason</label>
+                  <textarea
+                    className={styles.textareaBase}
+                    rows={3}
+                    required
+                    placeholder="State reason for monetization..."
+                    value={monetizationForm.reason}
+                    onChange={(e) => setMonetizationForm((f) => ({ ...f, reason: e.target.value }))}
+                  />
+                </div>
+
+                <div className={styles.buttonGroup}>
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={isMonetizationSubmitting}
+                  >
+                    {isMonetizationSubmitting ? (editingMonetizationId ? "Updating…" : "Submitting…") : (editingMonetizationId ? "Update" : "Submit")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.clearBtn}
+                    onClick={() => { setShowMonetizationForm(false); setMonetizationForm(initialMonetizationForm); setEditingMonetizationId(null); }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : isMonetizationLoading ? (
+              <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading records…</p>
+            ) : (
+              <LeaveMonetizationTable data={monetizationRecords} onEdit={handleEditMonetization} onDelete={handleDeleteMonetization} />
             )}
           </div>
         )}
@@ -563,8 +930,9 @@ export default function LeaveApplication() {
                 type="date"
                 name="dateFiled"
                 value={form.dateFiled}
-                onChange={handleChange}
+                readOnly
                 required
+                style={{ background: "#f3f4f6", cursor: "not-allowed" }}
               />
             </div>
 
@@ -586,35 +954,54 @@ export default function LeaveApplication() {
             </div>
 
             {/* Balance indicator — shown for VL, SL, SPL, Forced Leave */}
-            {balInfo && (
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                background: displayBalance !== null && displayBalance <= 0 ? "#fef2f2" : "#f0fdf4",
-                border: `1px solid ${displayBalance !== null && displayBalance <= 0 ? "#fca5a5" : "#86efac"}`,
-                borderRadius: "8px",
-                padding: "0.5rem 1rem",
-                marginBottom: "1.25rem",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                color: displayBalance !== null && displayBalance <= 0 ? "#dc2626" : "#15803d",
-              }}>
-                <span>{balInfo.label}:</span>
-                <span>
-                  {isBalanceLoading
-                    ? "Loading…"
-                    : displayBalance !== null
-                      ? `${fmt(displayBalance)} day(s)`
-                      : "—"}
-                </span>
-                {balance?.lastProcessedPeriodEnd && (
-                  <span style={{ fontWeight: 400, fontSize: "0.78rem", color: "#6b7280", marginLeft: "0.5rem" }}>
-                    (as of period ending {balance.lastProcessedPeriodEnd})
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.25rem" }}>
+              {balInfo && (
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  background: displayBalance !== null && displayBalance <= 0 ? "#fef2f2" : "#f0fdf4",
+                  border: `1px solid ${displayBalance !== null && displayBalance <= 0 ? "#fca5a5" : "#86efac"}`,
+                  borderRadius: "8px",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: displayBalance !== null && displayBalance <= 0 ? "#dc2626" : "#15803d",
+                }}>
+                  <span>{balInfo.label}:</span>
+                  <span>
+                    {isBalanceLoading
+                      ? "Loading…"
+                      : displayBalance !== null
+                        ? `${fmt(displayBalance)} day(s)`
+                        : "—"}
                   </span>
-                )}
-              </div>
-            )}
+                  {balance?.lastProcessedPeriodEnd && (
+                    <span style={{ fontWeight: 400, fontSize: "0.78rem", color: "#6b7280", marginLeft: "0.5rem" }}>
+                      (as of period ending {balance.lastProcessedPeriodEnd})
+                    </span>
+                  )}
+                </div>
+              )}
+              {/* For Forced Leave: also show VL balance since it is charged concurrently */}
+              {vlForForcedDisplay !== null && (
+                <div style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  background: vlForForcedDisplay <= 0 ? "#fef2f2" : "#fefce8",
+                  border: `1px solid ${vlForForcedDisplay <= 0 ? "#fca5a5" : "#fde047"}`,
+                  borderRadius: "8px",
+                  padding: "0.5rem 1rem",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  color: vlForForcedDisplay <= 0 ? "#dc2626" : "#854d0e",
+                }}>
+                  <span>VL Available (charged concurrently):</span>
+                  <span>{isBalanceLoading ? "Loading…" : `${fmt(vlForForcedDisplay)} day(s)`}</span>
+                </div>
+              )}
+            </div>
 
             {/* CSC informational notices (shown as soon as leave type is selected) */}
             {validation.notices.map((notice, i) => (
@@ -750,10 +1137,10 @@ export default function LeaveApplication() {
                 disabled={isSubmitting || (form.from !== "" && validation.errors.length > 0)}
                 title={validation.errors.length > 0 ? validation.errors[0] : undefined}
               >
-                {isSubmitting ? "Submitting…" : "Submit"}
+                {isSubmitting ? "Submitting…" : (editingId !== null ? "Update Leave" : "Submit")}
               </button>
               <button type="button" onClick={handleClear} className={styles.clearBtn}>
-                Clear
+                {editingId !== null ? "Cancel Edit" : "Clear"}
               </button>
             </div>
           </form>

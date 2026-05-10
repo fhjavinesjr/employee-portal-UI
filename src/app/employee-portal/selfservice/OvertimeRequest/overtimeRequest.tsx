@@ -18,6 +18,7 @@ interface OvertimeRequestDTO {
   totalHours?: number;
   purpose: string;
   status: string;
+  recommendedById?: number | null;
   approvedById?: number | null;
   approvedAt?: string | null;
   approvalRemarks?: string | null;
@@ -43,6 +44,8 @@ export default function OvertimeRequest() {
   const [records, setRecords] = useState<OvertimeRequestDTO[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [nameMap, setNameMap] = useState<Map<number, string>>(new Map());
 
   const today = new Date().toISOString().split("T")[0];
   const nowLocal = () => {
@@ -83,9 +86,24 @@ export default function OvertimeRequest() {
     }
   }, []);
 
+  const fetchEmployeeNames = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/employees/basicInfo`);
+      if (!res.ok) return;
+      const data: { employeeId: number; fullName?: string; firstname?: string; lastname?: string }[] = await res.json();
+      const map = new Map<number, string>();
+      data.forEach((e) => {
+        const name = e.fullName?.trim() || [e.firstname, e.lastname].filter(Boolean).join(" ").trim();
+        if (e.employeeId && name) map.set(e.employeeId, name);
+      });
+      setNameMap(map);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetchRecords();
-  }, [fetchRecords]);
+    fetchEmployeeNames();
+  }, [fetchRecords, fetchEmployeeNames]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,13 +130,17 @@ export default function OvertimeRequest() {
         purpose: form.purpose,
         status: "Pending",
       };
-      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/overtime-request/create`, {
-        method: "POST",
+      const url = editingId !== null
+        ? `${API_BASE_URL_HRM}/api/overtime-request/update/${editingId}`
+        : `${API_BASE_URL_HRM}/api/overtime-request/create`;
+      const res = await fetchWithAuth(url, {
+        method: editingId !== null ? "PUT" : "POST",
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
-      Toast.fire({ icon: "success", title: "Overtime request filed successfully" });
+      Toast.fire({ icon: "success", title: editingId !== null ? "Overtime request updated" : "Overtime request filed successfully" });
       setForm({ dateFiled: today, dateTimeFrom: nowLocal(), dateTimeTo: nowLocal(), purpose: "" });
+      setEditingId(null);
       setActiveTab("table");
       fetchRecords();
     } catch (err) {
@@ -138,6 +160,37 @@ export default function OvertimeRequest() {
   const fmtDateTime = (dt: string | null | undefined) => {
     if (!dt) return "—";
     return dt.replace("T", " ").substring(0, 16);
+  };
+
+  const handleEdit = (r: OvertimeRequestDTO) => {
+    setEditingId(r.overtimeRequestId!);
+    setForm({
+      dateFiled: r.dateFiled,
+      dateTimeFrom: (r.dateTimeFrom ?? "").replace(" ", "T").substring(0, 16),
+      dateTimeTo: (r.dateTimeTo ?? "").replace(" ", "T").substring(0, 16),
+      purpose: r.purpose,
+    });
+    setActiveTab("apply");
+  };
+
+  const handleDelete = async (id: number) => {
+    const result = await Swal.fire({
+      title: "Delete this overtime request?",
+      text: "This action cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Yes, delete it",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/overtime-request/delete/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await res.text());
+      Toast.fire({ icon: "success", title: "Overtime request deleted" });
+      fetchRecords();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Failed to delete", text: String(err) });
+    }
   };
 
   return (
@@ -162,7 +215,7 @@ export default function OvertimeRequest() {
               onClick={() => setActiveTab("apply")}
               style={{ background: "none", border: "none", cursor: "pointer", fontWeight: activeTab === "apply" ? 700 : 400, color: activeTab === "apply" ? "#1d4ed8" : "#374151", borderBottom: activeTab === "apply" ? "2px solid #1d4ed8" : "none", paddingBottom: "0.25rem" }}
             >
-              File Request
+              {editingId !== null ? "Edit Request" : "File Request"}
             </button>
           </div>
 
@@ -182,6 +235,9 @@ export default function OvertimeRequest() {
                         <th style={th}>Purpose</th>
                         <th style={th}>Status</th>
                         <th style={th}>Remarks</th>
+                        <th style={th}>Recommending Officer</th>
+                        <th style={th}>Approved By</th>
+                        <th style={th}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -194,6 +250,18 @@ export default function OvertimeRequest() {
                           <td style={td}>{r.purpose}</td>
                           <td style={td}>{statusBadge(r.status)}</td>
                           <td style={td}>{r.approvalRemarks ?? "—"}</td>
+                          <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
+                          <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
+                          <td style={td}>
+                            {r.status === "Pending" ? (
+                              <>
+                                <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
+                                <button onClick={() => handleDelete(r.overtimeRequestId!)} style={deleteBtnStyle}>🗑️ Delete</button>
+                              </>
+                            ) : (
+                              <button style={printBtnStyle}>🖨️</button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -207,7 +275,7 @@ export default function OvertimeRequest() {
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: 520 }}>
               <div className={styles.formGroup}>
                 <label>Date Filed</label>
-                <input type="date" value={form.dateFiled} onChange={(e) => setForm({ ...form, dateFiled: e.target.value })} className={styles.inputField} required />
+                <input type="date" value={form.dateFiled} readOnly className={styles.inputField} required style={{ background: "#f3f4f6", cursor: "not-allowed" }} />
               </div>
               <div className={styles.formGroup}>
                 <label>Inclusive Date &amp; Time — From</label>
@@ -231,10 +299,10 @@ export default function OvertimeRequest() {
               </div>
               <div className={styles.buttonGroup}>
                 <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
-                  {isSubmitting ? "Submitting..." : "File Overtime Request"}
+                  {isSubmitting ? "Submitting..." : (editingId !== null ? "Update Request" : "File Overtime Request")}
                 </button>
-                <button type="button" onClick={() => setForm({ dateFiled: today, dateTimeFrom: nowLocal(), dateTimeTo: nowLocal(), purpose: "" })} className={styles.clearBtn}>
-                  Clear
+                <button type="button" onClick={() => { setForm({ dateFiled: today, dateTimeFrom: nowLocal(), dateTimeTo: nowLocal(), purpose: "" }); setEditingId(null); setActiveTab("table"); }} className={styles.clearBtn}>
+                  {editingId !== null ? "Cancel Edit" : "Clear"}
                 </button>
               </div>
             </form>
@@ -247,3 +315,6 @@ export default function OvertimeRequest() {
 
 const th: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap" };
 const td: React.CSSProperties = { padding: "6px 12px", verticalAlign: "middle" };
+const editBtnStyle: React.CSSProperties = { background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", marginRight: "0.3rem", fontSize: "0.8rem" };
+const deleteBtnStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
+const printBtnStyle: React.CSSProperties = { background: "#6b7280", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
