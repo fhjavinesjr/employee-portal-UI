@@ -8,11 +8,14 @@ import modalStyles from "@/styles/Modal.module.scss";
 
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchPersonalData } from "@/lib/services/api";
+import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { PersonalData } from "@/lib/types/PersonalData";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<PersonalData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [position, setPosition] = useState<string>("");
+  const [businessUnit, setBusinessUnit] = useState<string>("");
 
   useEffect(() => {
     const employeeId = localStorageUtil.getEmployeeId();
@@ -25,6 +28,26 @@ export default function ProfilePage() {
       .then(setProfile)
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    // Fetch position and business unit
+    const API_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+    const API_ADMIN = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+
+    Promise.all([
+      fetchWithAuth(`${API_HRM}/api/employeeAppointment/getLatestEmployeeAppointmentByEmployeeId/${employeeId}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetchWithAuth(`${API_ADMIN}/api/job-position/get-all`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetchWithAuth(`${API_ADMIN}/api/manage-personnel/get-all`).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetchWithAuth(`${API_ADMIN}/api/businessUnits/get-all`).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([appointment, jobPositions, personnel, businessUnits]) => {
+      const jobPositionId = appointment?.jobPositionId;
+      const pos = (jobPositions as { jobPositionId: number; jobPositionName: string }[]).find(jp => jp.jobPositionId === jobPositionId)?.jobPositionName ?? "";
+      setPosition(pos);
+
+      const baseEntry = (personnel as { employeeId: number | string; base: string; businessUnitId: number }[]).find(p => String(p.employeeId) === String(employeeId) && p.base?.toLowerCase() === "yes");
+      const businessUnitId = baseEntry?.businessUnitId;
+      const bu = (businessUnits as { businessUnitsId: number; businessUnitsName: string }[]).find(bu => bu.businessUnitsId === businessUnitId)?.businessUnitsName ?? "";
+      setBusinessUnit(bu);
+    }).catch(console.error);
   }, []);
 
   if (loading) {
@@ -115,6 +138,20 @@ export default function ProfilePage() {
               <label>Email Address</label>
               <p className={Ustyles.staticField}>{profile.email}</p>
             </div>
+
+            {position && (
+              <div className={Ustyles.formGroup}>
+                <label>Current Position</label>
+                <p className={Ustyles.staticField}>{position}</p>
+              </div>
+            )}
+
+            {businessUnit && (
+              <div className={Ustyles.formGroup}>
+                <label>Business Unit</label>
+                <p className={Ustyles.staticField}>{businessUnit}</p>
+              </div>
+            )}
           </div>
 
         </form>

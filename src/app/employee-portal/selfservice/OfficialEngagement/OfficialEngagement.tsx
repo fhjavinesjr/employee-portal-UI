@@ -50,6 +50,7 @@ export default function OfficialEngagement() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nameMap, setNameMap] = useState<Map<number, string>>(new Map());
+  const [typeFilter, setTypeFilter] = useState<"All" | "Official Business" | "Official Time">("All");
 
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState<FormState>({
@@ -85,6 +86,10 @@ export default function OfficialEngagement() {
   }, []);
 
   useEffect(() => { fetchRecords(); fetchEmployeeNames(); }, [fetchRecords, fetchEmployeeNames]);
+
+  const filteredRecords = typeFilter === "All"
+    ? records
+    : records.filter((r) => r.officialType === typeFilter);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,8 +202,21 @@ export default function OfficialEngagement() {
           {activeTab === "table" && (
             <>
               {isLoading && <p>Loading...</p>}
-              {!isLoading && records.length === 0 && <p>No official engagement records found.</p>}
-              {!isLoading && records.length > 0 && (
+              {/* Type filter */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 600, color: "#374151" }}>Filter by Type:</label>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as "All" | "Official Business" | "Official Time")}
+                  style={{ padding: "4px 8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.85rem" }}
+                >
+                  <option value="All">All</option>
+                  <option value="Official Business">Official Business</option>
+                  <option value="Official Time">Official Time</option>
+                </select>
+              </div>
+              {!isLoading && filteredRecords.length === 0 && <p>No official engagement records found.</p>}
+              {!isLoading && filteredRecords.length > 0 && (
                 <div style={{ overflowX: "auto" }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
                     <thead>
@@ -216,7 +234,7 @@ export default function OfficialEngagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {records.map((r) => (
+                      {filteredRecords.map((r) => (
                         <tr key={r.officialEngagementApplicationId} style={{ borderBottom: "1px solid #e2e8f0" }}>
                           <td style={td}>{r.dateFiled}</td>
                           <td style={td}>{r.officialType}</td>
