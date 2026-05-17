@@ -14,6 +14,11 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 
 
+const UI_URL_ADMINISTRATIVE = process.env.NEXT_PUBLIC_UI_URL_ADMINISTRATIVE ?? 'http://localhost:3082';
+const UI_URL_HRM = process.env.NEXT_PUBLIC_UI_URL_HRM ?? 'http://localhost:3085';
+const UI_URL_TIMEKEEPING = process.env.NEXT_PUBLIC_UI_URL_TIMEKEEPING ?? 'http://localhost:3083';
+const UI_URL_PAYROLL = process.env.NEXT_PUBLIC_UI_URL_PAYROLL ?? 'http://localhost:3087';
+
 const menuItems = [
   {
     id: 1,
@@ -25,19 +30,25 @@ const menuItems = [
     id: 2,
     icon: <HiViewGrid />,
     label: "Administrative",
-    goto: "http://localhost:3082/administrative/dashboard",
+    goto: `${UI_URL_ADMINISTRATIVE}/administrative/welcomepage`,
   },
   {
     id: 3,
     icon: <FaUserFriends />,
     label: "HR Management",
-    goto: "http://localhost:3085/hr-management/welcomepage",
+    goto: `${UI_URL_HRM}/hr-management/welcomepage`,
   },
   {
     id: 4,
     icon: <MdAccessTime />,
     label: "Timekeeping",
-    goto: "http://localhost:3083/time-keeping/dashboard",
+    goto: `${UI_URL_TIMEKEEPING}/time-keeping/welcomepage`,
+  },
+  {
+    id: 5,
+    icon: <MdOutlineMiscellaneousServices />,
+    label: "Payroll",
+    goto: `${UI_URL_PAYROLL}/payroll-management/welcomepage`,
   },
 ];
 
