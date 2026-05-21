@@ -1,6 +1,8 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import styles from "@/styles/LeaveApplication.module.scss";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 export interface MonetizationRecord {
   id: number;
@@ -76,8 +78,56 @@ const td: React.CSSProperties = {
 };
 
 export default function LeaveMonetizationTable({ data, onEdit, onDelete }: Props) {
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => { setCurrentPage(1); }, [search, itemsPerPage]);
+
+  const filteredData = data.filter((record) => {
+    const q = search.toLowerCase();
+    return (
+      record.dateFiled.toLowerCase().includes(q) ||
+      (record.reason ?? "").toLowerCase().includes(q) ||
+      record.recommendationStatus.toLowerCase().includes(q) ||
+      record.approvalStatus.toLowerCase().includes(q)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className={styles.leaveapplicationTable}>
+      {/* Search + Pagination toolbar */}
+      <div className={styles.tableToolbar}>
+        <input
+          type="text"
+          placeholder="Search by date, reason, status…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className={styles.paginationControls}>
+          <label>Rows:</label>
+          <select
+            className={styles.rowSelect}
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+          >
+            {PAGE_SIZE_OPTIONS.map((s) => (<option key={s} value={s}>{s}</option>))}
+          </select>
+          <span className={styles.recordInfo}>
+            {filteredData.length === 0 ? "0" : startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredData.length)} of {filteredData.length}
+          </span>
+          <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>First</button>
+          <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>Prev</button>
+          <span className={styles.pageIndicator}>Page {currentPage} of {totalPages || 1}</span>
+          <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>Next</button>
+          <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>Last</button>
+        </div>
+      </div>
+
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", width: "100%" }}>
           <thead>
@@ -100,14 +150,14 @@ export default function LeaveMonetizationTable({ data, onEdit, onDelete }: Props
             </tr>
           </thead>
           <tbody>
-            {data.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={15} style={{ ...td, textAlign: "center", color: "#6b7280", padding: "1.5rem" }}>
                   No leave monetization records found.
                 </td>
               </tr>
             ) : (
-              data.map((record) => (
+              paginatedData.map((record) => (
                 <tr key={record.id}>
                   <td style={td}>{record.dateFiled}</td>
                   <td style={td}>{fmt(record.noOfDaysVL)}</td>

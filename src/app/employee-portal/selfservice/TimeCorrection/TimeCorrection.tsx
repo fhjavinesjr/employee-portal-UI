@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
 import modalStyles from "@/styles/Modal.module.scss";
@@ -9,7 +10,7 @@ import to12HourFormat from "@/lib/utils/convert24To12HrFormat";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
-const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 
 interface TimeCorrectionDTO {
   timeCorrectionId?: number;
@@ -57,6 +58,9 @@ export default function TimeCorrection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nameMap, setNameMap] = useState<Map<number, string>>(new Map());
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const today = new Date().toISOString().split("T")[0];
   const defaultForm: FormState = {
@@ -209,6 +213,16 @@ export default function TimeCorrection() {
     }
   };
 
+  useEffect(() => { setCurrentPage(1); }, [search, itemsPerPage]);
+
+  const filteredRecords = records.filter((r) => {
+    const q = search.toLowerCase();
+    return r.dateFiled.toLowerCase().includes(q) || r.workDate.toLowerCase().includes(q) || r.reason.toLowerCase().includes(q) || r.status.toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRecords = filteredRecords.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div id="timecorrectionModal" className={modalStyles.Modal}>
       <div className={modalStyles.modalContent}>
@@ -231,51 +245,80 @@ export default function TimeCorrection() {
               {isLoading && <p>Loading...</p>}
               {!isLoading && records.length === 0 && <p>No time correction records found.</p>}
               {!isLoading && records.length > 0 && (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-                    <thead>
-                      <tr style={{ background: "#f1f5f9" }}>
-                        <th style={th}>Date Filed</th>
-                        <th style={th}>Work Date</th>
-                        <th style={th}>Time In</th>
-                        <th style={th}>Break Out</th>
-                        <th style={th}>Break In</th>
-                        <th style={th}>Time Out</th>
-                        <th style={th}>Status</th>
-                        <th style={th}>Remarks</th>
-                        <th style={th}>Recommending Officer</th>
-                        <th style={th}>Approved By</th>
-                        <th style={th}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {records.map((r) => (
-                        <tr key={r.timeCorrectionId} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                          <td style={td}>{r.dateFiled}</td>
-                          <td style={td}>{r.workDate}</td>
-                          <td style={td}>{parseTime(r.correctedTimeIn as unknown as string)}</td>
-                          <td style={td}>{parseTime(r.correctedBreakOut as unknown as string)}</td>
-                          <td style={td}>{parseTime(r.correctedBreakIn as unknown as string)}</td>
-                          <td style={td}>{parseTime(r.correctedTimeOut as unknown as string)}</td>
-                          <td style={td}>{statusBadge(r.status)}</td>
-                          <td style={td}>{r.approvalRemarks ?? "—"}</td>
-                          <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
-                          <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
-                          <td style={td}>
-                            {r.status === "Pending" ? (
-                              <>
-                                <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
-                                <button onClick={() => handleDelete(r.timeCorrectionId!)} style={deleteBtnStyle}>🗑️ Delete</button>
-                              </>
-                            ) : (
-                              <button style={printBtnStyle}>🖨️</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className={styles.tableToolbar}>
+                    <input
+                      type="text"
+                      placeholder="Search…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      style={{ border: "1px solid #ccc", borderRadius: 4, padding: "5px 10px", fontSize: "13px", minWidth: "180px" }}
+                    />
+                    <div className={styles.paginationControls}>
+                      <label>Rows:</label>
+                      <select className={styles.rowSelect} value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))}>
+                        {[10, 25, 50, 100].map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <span className={styles.recordInfo}>
+                        {filteredRecords.length === 0 ? "0" : startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredRecords.length)} of {filteredRecords.length}
+                      </span>
+                      <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>First</button>
+                      <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>Prev</button>
+                      <span className={styles.pageIndicator}>Page {currentPage} of {totalPages || 1}</span>
+                      <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>Next</button>
+                      <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>Last</button>
+                    </div>
+                  </div>
+                  {paginatedRecords.length === 0 ? (
+                    <p>No results match your search.</p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr style={{ background: "#f1f5f9" }}>
+                            <th style={th}>Date Filed</th>
+                            <th style={th}>Work Date</th>
+                            <th style={th}>Time In</th>
+                            <th style={th}>Break Out</th>
+                            <th style={th}>Break In</th>
+                            <th style={th}>Time Out</th>
+                            <th style={th}>Status</th>
+                            <th style={th}>Remarks</th>
+                            <th style={th}>Recommending Officer</th>
+                            <th style={th}>Approved By</th>
+                            <th style={th}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedRecords.map((r) => (
+                            <tr key={r.timeCorrectionId} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                              <td style={td}>{r.dateFiled}</td>
+                              <td style={td}>{r.workDate}</td>
+                              <td style={td}>{parseTime(r.correctedTimeIn as unknown as string)}</td>
+                              <td style={td}>{parseTime(r.correctedBreakOut as unknown as string)}</td>
+                              <td style={td}>{parseTime(r.correctedBreakIn as unknown as string)}</td>
+                              <td style={td}>{parseTime(r.correctedTimeOut as unknown as string)}</td>
+                              <td style={td}>{statusBadge(r.status)}</td>
+                              <td style={td}>{r.approvalRemarks ?? "—"}</td>
+                              <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
+                              <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
+                              <td style={td}>
+                                {r.status === "Pending" ? (
+                                  <>
+                                    <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
+                                    <button onClick={() => handleDelete(r.timeCorrectionId!)} style={deleteBtnStyle}>🗑️ Delete</button>
+                                  </>
+                                ) : (
+                                  <button style={printBtnStyle}>🖨️</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

@@ -1,13 +1,14 @@
 "use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2";
 import modalStyles from "@/styles/Modal.module.scss";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
-const API_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
-const API_ADMIN = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+const API_HRM = runtimeConfig.getApiUrl("hrm");
+const API_ADMIN = runtimeConfig.getApiUrl("administrative");
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

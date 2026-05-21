@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect, useCallback } from "react";
 import Swal from "sweetalert2";
 import styles from "@/styles/LeaveApplication.module.scss";
@@ -7,7 +8,7 @@ import modalStyles from "@/styles/Modal.module.scss";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
-const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 
 interface OfficialEngagementDTO {
   officialEngagementApplicationId?: number;
@@ -51,6 +52,9 @@ export default function OfficialEngagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nameMap, setNameMap] = useState<Map<number, string>>(new Map());
   const [typeFilter, setTypeFilter] = useState<"All" | "Official Business" | "Official Time">("All");
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState<FormState>({
@@ -90,6 +94,16 @@ export default function OfficialEngagement() {
   const filteredRecords = typeFilter === "All"
     ? records
     : records.filter((r) => r.officialType === typeFilter);
+
+  useEffect(() => { setCurrentPage(1); }, [search, itemsPerPage, typeFilter]);
+
+  const searchFiltered = filteredRecords.filter((r) => {
+    const q = search.toLowerCase();
+    return r.dateFiled.toLowerCase().includes(q) || r.details.toLowerCase().includes(q) || r.status.toLowerCase().includes(q);
+  });
+  const totalPages = Math.ceil(searchFiltered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRecords = searchFiltered.slice(startIndex, startIndex + itemsPerPage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,51 +229,80 @@ export default function OfficialEngagement() {
                   <option value="Official Time">Official Time</option>
                 </select>
               </div>
-              {!isLoading && filteredRecords.length === 0 && <p>No official engagement records found.</p>}
-              {!isLoading && filteredRecords.length > 0 && (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-                    <thead>
-                      <tr style={{ background: "#f1f5f9" }}>
-                        <th style={th}>Date Filed</th>
-                        <th style={th}>Type</th>
-                        <th style={th}>Start</th>
-                        <th style={th}>End</th>
-                        <th style={th}>Details</th>
-                        <th style={th}>Status</th>
-                        <th style={th}>Remarks</th>
-                        <th style={th}>Recommending Officer</th>
-                        <th style={th}>Approved By</th>
-                        <th style={th}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRecords.map((r) => (
-                        <tr key={r.officialEngagementApplicationId} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                          <td style={td}>{r.dateFiled}</td>
-                          <td style={td}>{r.officialType}</td>
-                          <td style={td}>{r.startDate} {r.startTime?.substring(0, 5)}</td>
-                          <td style={td}>{r.endDate} {r.endTime?.substring(0, 5)}</td>
-                          <td style={td}>{r.details}</td>
-                          <td style={td}>{statusBadge(r.status)}</td>
-                          <td style={td}>{r.approvalRemarks ?? "—"}</td>
-                          <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
-                          <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
-                          <td style={td}>
-                            {r.status === "Pending" ? (
-                              <>
-                                <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
-                                <button onClick={() => handleDelete(r.officialEngagementApplicationId!)} style={deleteBtnStyle}>🗑️ Delete</button>
-                              </>
-                            ) : (
-                              <button style={printBtnStyle}>🖨️</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {!isLoading && records.length === 0 && <p>No official engagement records found.</p>}
+              {!isLoading && records.length > 0 && (
+                <>
+                  <div className={styles.tableToolbar}>
+                    <input
+                      type="text"
+                      placeholder="Search…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      style={{ border: "1px solid #ccc", borderRadius: 4, padding: "5px 10px", fontSize: "13px", minWidth: "180px" }}
+                    />
+                    <div className={styles.paginationControls}>
+                      <label>Rows:</label>
+                      <select className={styles.rowSelect} value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))}>
+                        {[10, 25, 50, 100].map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <span className={styles.recordInfo}>
+                        {searchFiltered.length === 0 ? "0" : startIndex + 1}–{Math.min(startIndex + itemsPerPage, searchFiltered.length)} of {searchFiltered.length}
+                      </span>
+                      <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>First</button>
+                      <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>Prev</button>
+                      <span className={styles.pageIndicator}>Page {currentPage} of {totalPages || 1}</span>
+                      <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage((p) => p + 1)}>Next</button>
+                      <button className={styles.pageBtn} disabled={currentPage >= totalPages} onClick={() => setCurrentPage(totalPages)}>Last</button>
+                    </div>
+                  </div>
+                  {paginatedRecords.length === 0 ? (
+                    <p>No results match your search.</p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr style={{ background: "#f1f5f9" }}>
+                            <th style={th}>Date Filed</th>
+                            <th style={th}>Type</th>
+                            <th style={th}>Start</th>
+                            <th style={th}>End</th>
+                            <th style={th}>Details</th>
+                            <th style={th}>Status</th>
+                            <th style={th}>Remarks</th>
+                            <th style={th}>Recommending Officer</th>
+                            <th style={th}>Approved By</th>
+                            <th style={th}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedRecords.map((r) => (
+                            <tr key={r.officialEngagementApplicationId} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                              <td style={td}>{r.dateFiled}</td>
+                              <td style={td}>{r.officialType}</td>
+                              <td style={td}>{r.startDate} {r.startTime?.substring(0, 5)}</td>
+                              <td style={td}>{r.endDate} {r.endTime?.substring(0, 5)}</td>
+                              <td style={td}>{r.details}</td>
+                              <td style={td}>{statusBadge(r.status)}</td>
+                              <td style={td}>{r.approvalRemarks ?? "—"}</td>
+                              <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
+                              <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
+                              <td style={td}>
+                                {r.status === "Pending" ? (
+                                  <>
+                                    <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
+                                    <button onClick={() => handleDelete(r.officialEngagementApplicationId!)} style={deleteBtnStyle}>🗑️ Delete</button>
+                                  </>
+                                ) : (
+                                  <button style={printBtnStyle}>🖨️</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

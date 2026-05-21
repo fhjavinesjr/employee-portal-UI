@@ -1,5 +1,6 @@
 "use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useEffect } from "react";
 import styles from "@/styles/LoginForm.module.scss";
 import InputFieldSetup from "../../../components/login/InputFieldSetup";
@@ -16,7 +17,8 @@ import { setCookie } from "@/lib/utils/cookies";
 
 const { INACTIVITY_LIMIT } = AUTH_CONFIG;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+const API_BASE_URL = runtimeConfig.getApiUrl("hrm");
+const API_BASE_URL_ADMINISTRATIVE = runtimeConfig.getApiUrl("administrative");
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,6 +83,19 @@ export default function LoginPage() {
         localStorageUtil.setEmployeeFullname(currentEmp.fullName);
         localStorageUtil.setEmployeeRole(currentEmp.role);
         localStorageUtil.setBiometricNo(currentEmp.biometricNo);
+      }
+
+      // Fetch and store system configuration from backend
+      try {
+        const configRes = await fetchWithAuth(`${API_BASE_URL_ADMINISTRATIVE}/api/system-config/get-all`);
+        if (configRes.ok) {
+          const configs: Array<{ configKey: string; configValue: string }> = await configRes.json();
+          const configMap: Record<string, string> = {};
+          configs.forEach(c => { configMap[c.configKey] = c.configValue; });
+          localStorageUtil.setSystemConfig(configMap);
+        }
+      } catch (e) {
+        console.warn("Could not load system config:", e);
       }
 
       // Success alert & redirect

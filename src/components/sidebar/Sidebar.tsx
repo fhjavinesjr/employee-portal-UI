@@ -1,5 +1,6 @@
 "use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,10 +15,10 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 
 
-const UI_URL_ADMINISTRATIVE = process.env.NEXT_PUBLIC_UI_URL_ADMINISTRATIVE ?? 'http://localhost:3082';
-const UI_URL_HRM = process.env.NEXT_PUBLIC_UI_URL_HRM ?? 'http://localhost:3085';
-const UI_URL_TIMEKEEPING = process.env.NEXT_PUBLIC_UI_URL_TIMEKEEPING ?? 'http://localhost:3083';
-const UI_URL_PAYROLL = process.env.NEXT_PUBLIC_UI_URL_PAYROLL ?? 'http://localhost:3087';
+const UI_URL_ADMINISTRATIVE = runtimeConfig.getUiUrl("administrative");
+const UI_URL_HRM = runtimeConfig.getUiUrl("hrm");
+const UI_URL_TIMEKEEPING = runtimeConfig.getUiUrl("timekeeping");
+const UI_URL_PAYROLL = runtimeConfig.getUiUrl("payroll");
 
 const menuItems = [
   {
@@ -122,8 +123,8 @@ useEffect(() => {
 
     if (!employeeId) return;
 
-    const API_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
-    const API_ADMIN = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+    const API_HRM = runtimeConfig.getApiUrl("hrm");
+    const API_ADMIN = runtimeConfig.getApiUrl("administrative");
 
     Promise.all([
       fetchWithAuth(`${API_HRM}/api/fetch/personal-data/${employeeId}`).then(r => r.ok ? r.json() : null).catch(() => null),

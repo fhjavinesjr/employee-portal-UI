@@ -1,7 +1,8 @@
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { PersonalData } from "@/lib/types/PersonalData";
 
-const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 
 ///Personal Data
 export async function fetchPersonalData(

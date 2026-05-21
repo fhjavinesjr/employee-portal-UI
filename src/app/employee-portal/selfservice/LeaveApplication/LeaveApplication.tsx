@@ -1,5 +1,6 @@
 "use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Swal from "sweetalert2";
 import styles from "@/styles/LeaveApplication.module.scss";
@@ -9,7 +10,7 @@ import LeaveMonetizationTable, { MonetizationRecord } from "@/components/tables/
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
-const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
+const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 
 // ── Leave Type Registry ─────────────────────────────────────────────────────
 // Single source of truth. Update strings here and every switch/label/list

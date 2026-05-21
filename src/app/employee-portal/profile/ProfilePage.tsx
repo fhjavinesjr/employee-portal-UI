@@ -1,5 +1,6 @@
 "use client";
 
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 
@@ -30,8 +31,8 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
 
     // Fetch position and business unit
-    const API_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
-    const API_ADMIN = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+    const API_HRM = runtimeConfig.getApiUrl("hrm");
+    const API_ADMIN = runtimeConfig.getApiUrl("administrative");
 
     Promise.all([
       fetchWithAuth(`${API_HRM}/api/employeeAppointment/getLatestEmployeeAppointmentByEmployeeId/${employeeId}`).then(r => r.ok ? r.json() : null).catch(() => null),

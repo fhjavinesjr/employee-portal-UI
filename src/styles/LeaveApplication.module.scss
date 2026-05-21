@@ -250,6 +250,75 @@
   }
 }
 
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+.tableToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+
+  input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 13px;
+    min-width: 180px;
+  }
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+
+  label {
+    font-size: 13px;
+    font-weight: 500;
+  }
+}
+
+.rowSelect {
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.recordInfo {
+  font-size: 12px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.pageBtn {
+  padding: 5px 10px;
+  background-color: #2f4da1;
+  border: 1px solid #2f4da1;
+  cursor: pointer;
+  border-radius: 3px;
+  color: white;
+  font-size: 12px;
+
+  &:hover:not(:disabled) {
+    background-color: #263f8a;
+  }
+
+  &:disabled {
+    background-color: #a0aec0;
+    border-color: #a0aec0;
+    cursor: not-allowed;
+  }
+}
+
+.pageIndicator {
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+}
+
 .printBtn {
   display: inline-flex;
   align-items: center;

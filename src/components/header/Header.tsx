@@ -1,4 +1,5 @@
 "use client";
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect, useRef } from "react";
 import {
   FiMail,
@@ -19,7 +20,7 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchPersonalData } from "@/lib/services/api";
 
-const API_BASE_URL_ADMINISTRATIVE = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+const API_BASE_URL_ADMINISTRATIVE = runtimeConfig.getApiUrl("administrative");
 
 export default function Header() {
   const router = useRouter();

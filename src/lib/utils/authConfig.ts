@@ -1,4 +1,5 @@
 // src/lib/utils/auth.config.ts
+import { runtimeConfig } from "./runtimeConfig";
 
 export const AUTH_CONFIG = {
   COOKIE: {
@@ -18,5 +19,7 @@ export const AUTH_CONFIG = {
     "/time-keeping/registration",
   ],
 
-  INACTIVITY_LIMIT: parseInt(process.env.NEXT_PUBLIC_INACTIVITY_TIMEOUT ?? '1800', 10), // seconds (configurable via NEXT_PUBLIC_INACTIVITY_TIMEOUT)
+  get INACTIVITY_LIMIT() {
+    return runtimeConfig.getInactivityTimeout();
+  },
 };

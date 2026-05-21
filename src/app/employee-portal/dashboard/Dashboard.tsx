@@ -1,4 +1,5 @@
 "use client";
+import { runtimeConfig } from "@/lib/utils/runtimeConfig";
 import React, { useState, useEffect } from "react";
 import {
   CalendarDays,
@@ -13,8 +14,8 @@ import styles from "@/styles/DashboardPage.module.scss";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
-const API_BASE_URL_HRM = process.env.NEXT_PUBLIC_API_BASE_URL_HRM;
-const API_BASE_URL_ADMINISTRATIVE = process.env.NEXT_PUBLIC_API_BASE_URL_ADMINISTRATIVE;
+const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
+const API_BASE_URL_ADMINISTRATIVE = runtimeConfig.getApiUrl("administrative");
 
 interface LeaveBalanceDTO {
   vacationLeaveBalance: number | null;
