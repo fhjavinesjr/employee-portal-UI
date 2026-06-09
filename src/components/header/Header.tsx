@@ -111,7 +111,7 @@ export default function Header() {
           <h1 className={styles.title}>Employee Portal</h1>
         )}
         <span style={{ fontSize: 11, fontWeight: 500, color: "#6b7280", padding: "2px 8px", borderRadius: 4, backgroundColor: "var(--bg-secondary, #f3f4f6)", letterSpacing: "0.3px", whiteSpace: "nowrap", marginLeft: 4 }}>
-          Bayanihan GovSuite
+          ISOFT HRIS
         </span>
       </div>
 

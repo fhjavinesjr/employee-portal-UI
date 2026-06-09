@@ -17,8 +17,9 @@ const ButtonSetup: React.FC<ButtonSetupProps> = ({ buttonType, label }) => {
                 </div> 
             :   label === "Sign Up" ?
                 <div className={styles.buttonGroup}>
+                    <h3>New Applicant?</h3>
                     <button type={buttonType} className={styles.signUpButton} >
-                        Create Account
+                        Apply for Employment
                     </button>
                 </div>
             :  
