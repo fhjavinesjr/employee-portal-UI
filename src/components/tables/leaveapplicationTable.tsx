@@ -24,10 +24,16 @@ interface Leave {
 interface LeaveApplicationTableProps {
   data: Leave[];
   onEdit?: (leave: Leave) => void;
-  onDelete?: (id: number) => void;
+  onDelete?: (id: number) => void | Promise<void>;
+  onPrint?: (leave: Leave) => void | Promise<void>;
 }
 
-export default function LeaveApplicationTable({ data, onEdit, onDelete }: LeaveApplicationTableProps) {
+export default function LeaveApplicationTable({
+  data,
+  onEdit,
+  onDelete,
+  onPrint,
+}: LeaveApplicationTableProps) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -94,7 +100,14 @@ export default function LeaveApplicationTable({ data, onEdit, onDelete }: LeaveA
           {paginatedData.length === 0 ? (
             <tr><td colSpan={7} style={{ textAlign: "center", color: "#6b7280", padding: "1rem" }}>No records found.</td></tr>
           ) : paginatedData.map((leave: Leave, index: number) => {
-            const canEditDelete = leave.status === "Pending" && (!leave.recommendationStatus || leave.recommendationStatus === "Pending");
+            const normalizedStatus = leave.status.trim().toLowerCase();
+            const canPrint =
+              normalizedStatus === "approved" ||
+              normalizedStatus === "disapproved";
+            const canEditDelete =
+              normalizedStatus === "pending" &&
+              (!leave.recommendationStatus ||
+                leave.recommendationStatus.trim().toLowerCase() === "pending");
             return (
               <tr key={index}>
                 <td>{leave.dateFiled}</td>
@@ -106,14 +119,38 @@ export default function LeaveApplicationTable({ data, onEdit, onDelete }: LeaveA
                 <td>{leave.approvedBy ?? "—"}</td>
                 <td>{leave.status}</td>
                 <td>
-                  {canEditDelete ? (
-                    <>
-                      <button onClick={() => onEdit?.(leave)} style={editBtnStyle}>✏️ Edit</button>
-                      <button onClick={() => onDelete?.(leave.id)} style={deleteBtnStyle}>🗑️ Delete</button>
-                    </>
-                  ) : (
-                    <button className={styles.optionBtn}>🖨️</button>
-                  )}
+                  <div style={actionCellStyle}>
+                    {canEditDelete && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => onEdit?.(leave)}
+                          style={editBtnStyle}
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete?.(leave.id)}
+                          style={deleteBtnStyle}
+                        >
+                          🗑️ Delete
+                        </button>
+                      </>
+                    )}
+
+                    {onPrint && canPrint && (
+                      <button
+                        type="button"
+                        onClick={() => onPrint(leave)}
+                        style={printBtnStyle}
+                        title="Print Leave Application"
+                        aria-label={`Print ${leave.leaveType} leave application`}
+                      >
+                        🖨️ Print
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
@@ -124,5 +161,39 @@ export default function LeaveApplicationTable({ data, onEdit, onDelete }: LeaveA
   );
 }
 
-const editBtnStyle: React.CSSProperties = { background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", marginRight: "0.3rem", fontSize: "0.8rem" };
-const deleteBtnStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
+const actionCellStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "0.3rem",
+  flexWrap: "wrap",
+};
+
+const editBtnStyle: React.CSSProperties = {
+  background: "#1d4ed8",
+  color: "#fff",
+  border: "none",
+  borderRadius: 5,
+  padding: "0.25rem 0.55rem",
+  cursor: "pointer",
+  fontSize: "0.8rem",
+};
+
+const deleteBtnStyle: React.CSSProperties = {
+  background: "#dc2626",
+  color: "#fff",
+  border: "none",
+  borderRadius: 5,
+  padding: "0.25rem 0.55rem",
+  cursor: "pointer",
+  fontSize: "0.8rem",
+};
+
+const printBtnStyle: React.CSSProperties = {
+  background: "#475569",
+  color: "#fff",
+  border: "none",
+  borderRadius: 5,
+  padding: "0.25rem 0.55rem",
+  cursor: "pointer",
+  fontSize: "0.8rem",
+};

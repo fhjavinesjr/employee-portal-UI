@@ -25,7 +25,8 @@ export interface MonetizationRecord {
 interface Props {
   data: MonetizationRecord[];
   onEdit?: (record: MonetizationRecord) => void;
-  onDelete?: (record: MonetizationRecord) => void;
+  onDelete?: (record: MonetizationRecord) => void | Promise<void>;
+  onPrint?: (record: MonetizationRecord) => void | Promise<void>;
 }
 
 function fmt(val: number | null | undefined): string {
@@ -77,7 +78,7 @@ const td: React.CSSProperties = {
   color: "#374151",
 };
 
-export default function LeaveMonetizationTable({ data, onEdit, onDelete }: Props) {
+export default function LeaveMonetizationTable({ data, onEdit, onDelete, onPrint }: Props) {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -157,7 +158,13 @@ export default function LeaveMonetizationTable({ data, onEdit, onDelete }: Props
                 </td>
               </tr>
             ) : (
-              paginatedData.map((record) => (
+              paginatedData.map((record) => {
+                const normalizedApprovalStatus = record.approvalStatus.trim().toLowerCase();
+                const canPrint =
+                  normalizedApprovalStatus === "approved" ||
+                  normalizedApprovalStatus === "disapproved";
+
+                return (
                 <tr key={record.id}>
                   <td style={td}>{record.dateFiled}</td>
                   <td style={td}>{fmt(record.noOfDaysVL)}</td>
@@ -179,15 +186,42 @@ export default function LeaveMonetizationTable({ data, onEdit, onDelete }: Props
                   <td style={td}>{record.recommendingOfficer ?? "—"}</td>
                   <td style={td}>{record.approvedBy ?? "—"}</td>
                   <td style={td}>
-                    {record.recommendationStatus === "Pending" && record.approvalStatus === "Pending" ? (
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        <button style={{ padding: "3px 10px", borderRadius: "4px", border: "none", background: "#2563eb", color: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }} onClick={() => onEdit?.(record)}>Edit</button>
-                        <button style={{ padding: "3px 10px", borderRadius: "4px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }} onClick={() => onDelete?.(record)}>Delete</button>
-                      </div>
-                    ) : "—"}
+                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      {record.recommendationStatus === "Pending" && record.approvalStatus === "Pending" && (
+                        <>
+                          <button
+                            type="button"
+                            style={{ padding: "3px 10px", borderRadius: "4px", border: "none", background: "#2563eb", color: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+                            onClick={() => onEdit?.(record)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            style={{ padding: "3px 10px", borderRadius: "4px", border: "none", background: "#dc2626", color: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+                            onClick={() => onDelete?.(record)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+
+                      {onPrint && canPrint && (
+                        <button
+                          type="button"
+                          style={{ padding: "3px 10px", borderRadius: "4px", border: "none", background: "#475569", color: "#fff", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
+                          onClick={() => onPrint(record)}
+                          title="Print Leave Monetization Application"
+                          aria-label={`Print leave monetization application filed on ${record.dateFiled}`}
+                        >
+                          🖨️ Print
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

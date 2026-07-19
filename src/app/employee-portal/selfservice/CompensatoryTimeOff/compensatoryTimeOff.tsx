@@ -91,7 +91,14 @@ export default function CompensatoryTimeOff() {
     const empId = localStorageUtil.getEmployeeId();
     if (!empId) { Swal.fire({ icon: "warning", title: "Session expired. Please log in again." }); return; }
     const hrs = parseFloat(form.hoursUsed);
-    if (isNaN(hrs) || hrs <= 0) { Swal.fire({ icon: "warning", title: "Enter valid hours to offset" }); return; }
+    if (![4, 8].includes(hrs)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Select valid CTO hours",
+        text: "A single-date CTO application allows either 4 hours or 8 hours.",
+      });
+      return;
+    }
     if (cocBalance !== null && hrs > cocBalance) {
       Swal.fire({ icon: "error", title: "Insufficient COC Balance", text: `Requested ${hrs} hrs but only ${cocBalance.toFixed(2)} hrs available.` });
       return;
@@ -248,13 +255,11 @@ export default function CompensatoryTimeOff() {
                               <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
                               <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
                               <td style={td}>
-                                {r.status === "Pending" ? (
+                                {r.status === "Pending" && (
                                   <>
                                     <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
                                     <button onClick={() => handleDelete(r.ctoId!)} style={deleteBtnStyle}>🗑️ Delete</button>
                                   </>
-                                ) : (
-                                  <button style={printBtnStyle}>🖨️</button>
                                 )}
                               </td>
                             </tr>
@@ -269,24 +274,55 @@ export default function CompensatoryTimeOff() {
           )}
 
           {activeTab === "apply" && (
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: 520 }}>
+            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: 560 }}>
               <div className={styles.formGroup}>
                 <label>Date Filed</label>
-                <input type="date" value={form.dateFiled} readOnly required style={{ background: "#f3f4f6", cursor: "not-allowed" }} />
+                <input
+                  type="date"
+                  value={form.dateFiled}
+                  readOnly
+                  required
+                  className={styles.inputField}
+                  style={{ background: "#f3f4f6", cursor: "not-allowed" }}
+                />
               </div>
               <div className={styles.formGroup}>
-                <label>Date of Offset</label>
-                <input type="date" value={form.dateOfOffset} onChange={(e) => setForm({ ...form, dateOfOffset: e.target.value })} required />
+                <label>Date of Offset (Day to take off)</label>
+                <input
+                  type="date"
+                  min={today}
+                  value={form.dateOfOffset}
+                  onChange={(e) => setForm({ ...form, dateOfOffset: e.target.value })}
+                  className={styles.inputField}
+                  required
+                />
               </div>
               <div className={styles.formGroup}>
                 <label>Hours to Use</label>
-                <input type="number" min="1" max={cocBalance ?? undefined} step="0.5" value={form.hoursUsed}
-                  onChange={(e) => setForm({ ...form, hoursUsed: e.target.value })} required />
-                {cocBalance !== null && <small style={{ color: "#6b7280" }}>Available: {cocBalance.toFixed(3)} hrs</small>}
+                <select
+                  value={form.hoursUsed}
+                  onChange={(e) => setForm({ ...form, hoursUsed: e.target.value })}
+                  className={styles.inputField}
+                  required
+                >
+                  <option value="4">4 hours — Half day</option>
+                  <option value="8">8 hours — Whole day</option>
+                </select>
+                {cocBalance !== null && (
+                  <small style={{ color: "#6b7280" }}>
+                    Single-date CTO allows 4 or 8 hours. Available: {cocBalance.toFixed(2)} hrs
+                  </small>
+                )}
               </div>
               <div className={styles.formGroup}>
                 <label>Reason</label>
-                <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} required />
+                <textarea
+                  value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                  className={styles.inputField}
+                  rows={3}
+                  required
+                />
               </div>
               <div className={styles.buttonGroup}>
                 <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
@@ -308,4 +344,3 @@ const th: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontWe
 const td: React.CSSProperties = { padding: "6px 12px", verticalAlign: "middle" };
 const editBtnStyle: React.CSSProperties = { background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", marginRight: "0.3rem", fontSize: "0.8rem" };
 const deleteBtnStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
-const printBtnStyle: React.CSSProperties = { background: "#6b7280", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };

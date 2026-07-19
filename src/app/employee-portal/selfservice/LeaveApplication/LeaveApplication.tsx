@@ -12,6 +12,8 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 
 const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 
+const MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE = 10;
+
 // ── Leave Type Registry ─────────────────────────────────────────────────────
 // Single source of truth. Update strings here and every switch/label/list
 // updates automatically.
@@ -622,6 +624,48 @@ export default function LeaveApplication() {
     setActiveTab("apply");
   };
 
+  const handlePrintLeave = async (record: TableLeaveData) => {
+    const finalStatus = record.status.trim().toLowerCase();
+    if (finalStatus !== "approved" && finalStatus !== "disapproved") {
+      await Swal.fire({
+        icon: "info",
+        title: "Report Not Available Yet",
+        text: "The leave form can only be printed after the application is finally Approved or Disapproved.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL_HRM}/api/leave-application/report/${record.id}`,
+        { method: "GET" }
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to generate leave application report.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `LeaveApplication_${record.id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      await Swal.fire({
+        icon: "error",
+        title: "Print Failed",
+        text: err instanceof Error
+          ? err.message
+          : "Unable to generate the leave application report.",
+      });
+    }
+  };
+
   const handleDeleteLeave = async (id: number) => {
     const result = await Swal.fire({
       title: "Delete this leave application?",
@@ -652,6 +696,19 @@ export default function LeaveApplication() {
     }
     const noOfDaysSL = parseFloat(monetizationForm.noOfDaysSL) || 0;
     const noOfDaysVL = parseFloat(monetizationForm.noOfDaysVL) || 0;
+
+    if (
+      noOfDaysSL > MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE ||
+      noOfDaysVL > MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE
+    ) {
+      Swal.fire(
+        "Validation",
+        `Vacation Leave and Sick Leave monetization are limited to ${MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE} day(s) each in this portal.`,
+        "warning"
+      );
+      return;
+    }
+
     if (noOfDaysSL + noOfDaysVL <= 0) {
       Swal.fire("Validation", "Please enter at least some days to monetize.", "warning");
       return;
@@ -696,6 +753,48 @@ export default function LeaveApplication() {
     setEditingMonetizationId(record.id);
     setShowMonetizationForm(true);
     setActiveTab("monetization");
+  };
+
+  const handlePrintMonetization = async (record: MonetizationRecord) => {
+    const finalStatus = record.approvalStatus.trim().toLowerCase();
+    if (finalStatus !== "approved" && finalStatus !== "disapproved") {
+      await Swal.fire({
+        icon: "info",
+        title: "Report Not Available Yet",
+        text: "The leave monetization form can only be printed after the request is finally Approved or Disapproved.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL_HRM}/api/leave-monetization/report/${record.id}`,
+        { method: "GET" }
+      );
+
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Failed to generate leave monetization report.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `LeaveMonetization_${record.id}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      await Swal.fire({
+        icon: "error",
+        title: "Print Failed",
+        text: err instanceof Error
+          ? err.message
+          : "Unable to generate the leave monetization report.",
+      });
+    }
   };
 
   const handleDeleteMonetization = async (record: MonetizationRecord) => {
@@ -797,7 +896,12 @@ export default function LeaveApplication() {
             ) : records.length === 0 ? (
               <p style={{ color: "#6b7280", padding: "1rem 0" }}>No leave applications found.</p>
             ) : (
-              <LeaveApplicationTable data={records} onEdit={handleEditLeave} onDelete={handleDeleteLeave} />
+              <LeaveApplicationTable
+                data={records}
+                onEdit={handleEditLeave}
+                onDelete={handleDeleteLeave}
+                onPrint={handlePrintLeave}
+              />
             )}
           </div>
         )}
@@ -846,28 +950,56 @@ export default function LeaveApplication() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label>VL Days to Monetize <small style={{ fontWeight: 400, color: "#6b7280" }}>(deducted first per CSC rules)</small></label>
+                  <label>
+                    VL Days to Monetize{" "}
+                    <small style={{ fontWeight: 400, color: "#6b7280" }}>
+                      (maximum {MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE} days)
+                    </small>
+                  </label>
                   <input
                     type="number"
                     min={0}
+                    max={MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE}
                     step={0.5}
                     className={styles.inputBase}
                     placeholder="0"
                     value={monetizationForm.noOfDaysVL}
-                    onChange={(e) => setMonetizationForm((f) => ({ ...f, noOfDaysVL: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (
+                        value === "" ||
+                        Number(value) <= MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE
+                      ) {
+                        setMonetizationForm((f) => ({ ...f, noOfDaysVL: value }));
+                      }
+                    }}
                   />
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label>SL Days to Monetize</label>
+                  <label>
+                    SL Days to Monetize{" "}
+                    <small style={{ fontWeight: 400, color: "#6b7280" }}>
+                      (maximum {MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE} days)
+                    </small>
+                  </label>
                   <input
                     type="number"
                     min={0}
+                    max={MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE}
                     step={0.5}
                     className={styles.inputBase}
                     placeholder="0"
                     value={monetizationForm.noOfDaysSL}
-                    onChange={(e) => setMonetizationForm((f) => ({ ...f, noOfDaysSL: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (
+                        value === "" ||
+                        Number(value) <= MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE
+                      ) {
+                        setMonetizationForm((f) => ({ ...f, noOfDaysSL: value }));
+                      }
+                    }}
                   />
                 </div>
 
@@ -914,7 +1046,12 @@ export default function LeaveApplication() {
             ) : isMonetizationLoading ? (
               <p style={{ color: "#6b7280", padding: "1rem 0" }}>Loading records…</p>
             ) : (
-              <LeaveMonetizationTable data={monetizationRecords} onEdit={handleEditMonetization} onDelete={handleDeleteMonetization} />
+              <LeaveMonetizationTable
+                data={monetizationRecords}
+                onEdit={handleEditMonetization}
+                onDelete={handleDeleteMonetization}
+                onPrint={handlePrintMonetization}
+              />
             )}
           </div>
         )}

@@ -165,6 +165,36 @@ export default function PassSlip() {
     }
   };
 
+  const handlePrint = async (passSlipId?: number) => {
+    if (!passSlipId) {
+      Swal.fire({
+        icon: "warning",
+        title: "No record selected",
+        text: "Please select a valid pass slip record to print.",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetchWithAuth(`${API_BASE_URL_HRM}/api/pass-slip/report/${passSlipId}`);
+      if (!res.ok) {
+        const message = await res.text().catch(() => "");
+        throw new Error(message || `Failed to generate pass slip (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Print Failed",
+        text: err instanceof Error ? err.message : "Unable to generate the selected Pass Slip.",
+      });
+    }
+  };
+
   useEffect(() => { setCurrentPage(1); }, [search, itemsPerPage]);
 
   const filteredRecords = records.filter((r) => {
@@ -258,9 +288,16 @@ export default function PassSlip() {
                                     <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
                                     <button onClick={() => handleDelete(r.passSlipId!)} style={deleteBtnStyle}>🗑️ Delete</button>
                                   </>
-                                ) : (
-                                  <button style={printBtnStyle}>🖨️</button>
-                                )}
+                                ) : r.status === "Approved" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePrint(r.passSlipId)}
+                                    style={printBtnStyle}
+                                    title="Print Pass Slip"
+                                  >
+                                    🖨️
+                                  </button>
+                                ) : null}
                               </td>
                             </tr>
                           ))}

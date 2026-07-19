@@ -12,7 +12,7 @@ import { FaHome, FaUserFriends } from "react-icons/fa";
 import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
 import { HiViewGrid, HiOfficeBuilding } from "react-icons/hi";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
-import { localStorageUtil } from "@/lib/utils/localStorageUtil";
+import { localStorageUtil, type PortalModuleAccess } from "@/lib/utils/localStorageUtil";
 
 
 const UI_URL_ADMINISTRATIVE = runtimeConfig.getUiUrl("administrative");
@@ -20,7 +20,56 @@ const UI_URL_HRM = runtimeConfig.getUiUrl("hrm");
 const UI_URL_TIMEKEEPING = runtimeConfig.getUiUrl("timekeeping");
 const UI_URL_PAYROLL = runtimeConfig.getUiUrl("payroll");
 
-const menuItems = [
+type PortalModuleKey = keyof PortalModuleAccess;
+
+type SidebarMenuItem = Pick<
+  React.ComponentProps<typeof MenuItem>,
+  "icon" | "label" | "goto"
+> & {
+  id: number;
+  portalModule?: PortalModuleKey;
+};
+
+type PermissionRuleset = {
+  permissionId: number;
+  permissionName: string;
+  isAdministrator: boolean;
+  portalModuleAccess?: string | PortalModuleAccess | null;
+};
+
+const NO_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
+  administrative: false,
+  hrManagement: false,
+  timeKeeping: false,
+  payroll: false,
+};
+
+const ALL_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
+  administrative: true,
+  hrManagement: true,
+  timeKeeping: true,
+  payroll: true,
+};
+
+const parsePortalModuleAccess = (
+  value: PermissionRuleset["portalModuleAccess"]
+): PortalModuleAccess => {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!parsed || typeof parsed !== "object") return { ...NO_PORTAL_MODULE_ACCESS };
+    const access = parsed as Partial<PortalModuleAccess>;
+    return {
+      administrative: access.administrative === true,
+      hrManagement: access.hrManagement === true,
+      timeKeeping: access.timeKeeping === true,
+      payroll: access.payroll === true,
+    };
+  } catch {
+    return { ...NO_PORTAL_MODULE_ACCESS };
+  }
+};
+
+const menuItems: SidebarMenuItem[] = [
   {
     id: 1,
     icon: <FaHome />,
@@ -32,24 +81,28 @@ const menuItems = [
     icon: <HiViewGrid />,
     label: "Administrative",
     goto: `${UI_URL_ADMINISTRATIVE}/administrative/welcomepage`,
+    portalModule: "administrative",
   },
   {
     id: 3,
     icon: <FaUserFriends />,
     label: "HR Management",
     goto: `${UI_URL_HRM}/hr-management/welcomepage`,
+    portalModule: "hrManagement",
   },
   {
     id: 4,
     icon: <MdAccessTime />,
     label: "Timekeeping",
     goto: `${UI_URL_TIMEKEEPING}/time-keeping/welcomepage`,
+    portalModule: "timeKeeping",
   },
   {
     id: 5,
     icon: <MdOutlineMiscellaneousServices />,
     label: "Payroll",
     goto: `${UI_URL_PAYROLL}/payroll-management/welcomepage`,
+    portalModule: "payroll",
   },
 ];
 
@@ -93,6 +146,7 @@ export default function Sidebar() {
   const [openWSM, setOpenWSM] = useState(isWSMRoute);
   const [isApprover, setIsApprover] = useState(false);
   const [isInWorkflow, setIsInWorkflow] = useState(false);
+  const [portalModuleAccess, setPortalModuleAccess] = useState<PortalModuleAccess>({ ...NO_PORTAL_MODULE_ACCESS });
 
   // Employee info state
   const [empInfo, setEmpInfo] = useState({
@@ -112,6 +166,54 @@ useEffect(() => {
 useEffect(() => {
   setOpenWSM(isWSMRoute);
 }, [isWSMRoute]);
+
+  // Resolve the current permission ruleset and map its top-level Portal flags.
+  // Cached flags avoid unnecessary menu flicker, while the backend remains the
+  // source of truth and refreshes the cache whenever the sidebar mounts.
+  useEffect(() => {
+    let cancelled = false;
+    const storedRole = localStorageUtil.getEmployeeRole()?.trim();
+    if (!storedRole) {
+      localStorageUtil.clearPortalModuleAccess();
+      setPortalModuleAccess({ ...NO_PORTAL_MODULE_ACCESS });
+      return () => { cancelled = true; };
+    }
+
+    const cached = localStorageUtil.getPortalModuleAccess(storedRole);
+    if (cached) setPortalModuleAccess(cached);
+
+    const loadPortalModuleAccess = async () => {
+      try {
+        const response = await fetchWithAuth(`${runtimeConfig.getApiUrl("administrative")}/api/permission/get-all`);
+        if (!response.ok) throw new Error(`Unable to load permissions (${response.status})`);
+
+        const rulesets = await response.json() as PermissionRuleset[];
+        const normalizedRole = storedRole.replace(/^ROLE_/i, "").toUpperCase();
+        const ruleset = rulesets.find((item) =>
+          String(item.permissionId) === storedRole ||
+          item.permissionName?.trim().toUpperCase() === normalizedRole
+        );
+
+        if (!ruleset) throw new Error("The current permission ruleset was not found");
+
+        const access = ruleset.isAdministrator
+          ? { ...ALL_PORTAL_MODULE_ACCESS }
+          : parsePortalModuleAccess(ruleset.portalModuleAccess);
+
+        if (cancelled) return;
+        setPortalModuleAccess(access);
+        localStorageUtil.setPortalModuleAccess(access, storedRole);
+      } catch (error) {
+        console.error("Unable to refresh Portal module permissions", error);
+        if (!cancelled && !cached) {
+          setPortalModuleAccess({ ...NO_PORTAL_MODULE_ACCESS });
+        }
+      }
+    };
+
+    void loadPortalModuleAccess();
+    return () => { cancelled = true; };
+  }, []);
 
   // Fetch employee info for the sidebar card
   useEffect(() => {
@@ -222,7 +324,9 @@ useEffect(() => {
       )}
 
       <div className={styles.menuSection}>
-        {menuItems.map((item) => (
+        {menuItems
+          .filter((item) => !item.portalModule || portalModuleAccess[item.portalModule])
+          .map((item) => (
           <MenuItem
             key={item.id}
             icon={item.icon}
@@ -231,7 +335,7 @@ useEffect(() => {
             isActive={pathname === item.goto}
             onClick={() => {}}
           />
-        ))}
+          ))}
 
         {/* Employee Self Service */}
         <div

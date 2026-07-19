@@ -287,13 +287,11 @@ export default function OfficialEngagement() {
                               <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
                               <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
                               <td style={td}>
-                                {r.status === "Pending" ? (
+                                {r.status === "Pending" && (
                                   <>
                                     <button onClick={() => handleEdit(r)} style={editBtnStyle}>✏️ Edit</button>
                                     <button onClick={() => handleDelete(r.officialEngagementApplicationId!)} style={deleteBtnStyle}>🗑️ Delete</button>
                                   </>
-                                ) : (
-                                  <button style={printBtnStyle}>🖨️</button>
                                 )}
                               </td>
                             </tr>
@@ -362,4 +360,3 @@ const th: React.CSSProperties = { padding: "8px 12px", textAlign: "left", fontWe
 const td: React.CSSProperties = { padding: "6px 12px", verticalAlign: "middle" };
 const editBtnStyle: React.CSSProperties = { background: "#1d4ed8", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", marginRight: "0.3rem", fontSize: "0.8rem" };
 const deleteBtnStyle: React.CSSProperties = { background: "#dc2626", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
-const printBtnStyle: React.CSSProperties = { background: "#6b7280", color: "#fff", border: "none", borderRadius: 5, padding: "0.25rem 0.55rem", cursor: "pointer", fontSize: "0.8rem" };
