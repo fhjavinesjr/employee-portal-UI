@@ -24,9 +24,7 @@ interface RequestConfig {
   statusField: string;
   approveUrl: (id: number) => string;
   disapproveUrl: (id: number) => string;
-  recommendUrl?: (id: number) => string;
-  /** If true, approve/disapprove/recommend sends the full updated DTO instead of {approvedById, remarks} */
-  useUpdateForAction?: boolean;
+  recommendUrl: (id: number) => string;
   /** Optional extra predicate to filter records within a shared endpoint (e.g. by officialType) */
   recordFilter?: (r: Record<string, unknown>) => boolean;
   getSummary: (r: Record<string, unknown>) => string;
@@ -38,6 +36,7 @@ interface RequestRow {
   employeeName: string;
   dateFiled: string;
   status: string;
+  recommendationStatus: string;
   summary: string;
   typeKey: string;
   raw: Record<string, unknown>;
@@ -68,9 +67,9 @@ const REQUEST_CONFIGS: Record<string, RequestConfig> = {
     idField: "leaveApplicationId",
     dateField: "dateFiled",
     statusField: "status",
-    approveUrl: (id) => `${API_HRM}/api/leave-application/update/${id}`,
-    disapproveUrl: (id) => `${API_HRM}/api/leave-application/update/${id}`,
-    useUpdateForAction: true,
+    approveUrl: (id) => `${API_HRM}/api/leave-application/approve/${id}`,
+    disapproveUrl: (id) => `${API_HRM}/api/leave-application/disapprove/${id}`,
+    recommendUrl: (id) => `${API_HRM}/api/leave-application/recommend/${id}`,
     getSummary: (r) =>
       `${r.leaveType ?? ""} | ${r.startDate ?? ""} → ${r.endDate ?? ""} | ${r.noOfDays ?? 0} days`,
   },
@@ -257,6 +256,12 @@ const Toast = Swal.mixin({
   timer: 3000,
   timerProgressBar: true,
 });
+
+const normalizeStatus = (value: unknown): string =>
+  String(value ?? "").trim().toLowerCase();
+
+const isNotYetRecommended = (status: string): boolean =>
+  status === "" || status === "pending" || status === "not recommended";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -579,73 +584,19 @@ export default function ApprovalRequestPage() {
         // Type-specific record filter (e.g. official business vs official time)
         if (config.recordFilter && !config.recordFilter(r)) return false;
 
-        const rowStatus = String(r[config.statusField] ?? "");
-        if (rowStatus !== selectedStatus) return false;
+        const rowStatus = normalizeStatus(r[config.statusField]);
+        if (rowStatus !== selectedStatus.toLowerCase()) return false;
 
         // Recommendation Status filter
         if (recStatusFilter !== "All") {
-          const recStatus = String(r.recommendationStatus ?? "");
+          const recStatus = normalizeStatus(r.recommendationStatus);
           if (recStatusFilter === "Not Recommended") {
-            if (recStatus !== "") return false;
+            if (!isNotYetRecommended(recStatus)) return false;
           } else if (recStatusFilter === "Recommended") {
             // Covers both "Recommended" and "Approved" (LeaveMonetization quirk)
-            if (recStatus !== "Recommended" && recStatus !== "Approved") return false;
+            if (recStatus !== "recommended" && recStatus !== "approved") return false;
           } else if (recStatusFilter === "Disapproved") {
-            if (recStatus !== "Disapproved") return false;
-          }
-        }
-
-        // Level-based recommendationStatus filter (only applies to Pending view)
-        if (selectedStatus === "Pending") {
-          const recStatus = String(r.recommendationStatus ?? "");
-          let levelForRecord = myApprovalLevel;
-          if (isAllBu) {
-            // Use the base=Yes entry to find the correct routing BU for this employee
-            const pEntry = allPersonnel.find((pp) => Number(pp.employeeId) === empId && String(pp.base).toLowerCase() === "yes");
-            if (pEntry) {
-              const reqId = employeeRequestMap.get(selectedType);
-              // Match by effective approver IDs (principal's for co-approver, own for direct approver)
-              const effectiveApproverIds = isCoApproving
-                ? coApprovedForIds.map(String)
-                : [String(loggedInId)];
-              const wf = allWorkflowsRaw.find(
-                (w) =>
-                  w.businessUnitId === pEntry.businessUnitId &&
-                  w.employeeRequestId === reqId &&
-                  effectiveApproverIds.includes(String(w.employeeId)),
-              );
-              levelForRecord = wf?.approvalLevel ?? null;
-            } else {
-              levelForRecord = null;
-            }
-          }
-          if (levelForRecord === 1) {
-            // Level 1 sees only items not yet recommended/approved at L1
-            if (recStatus === "Recommended" || recStatus === "Approved") return false;
-          } else if (levelForRecord === 2) {
-            // Level 2 normally sees only items already recommended at L1.
-            // Exception: if the REQUESTER is themselves the Level 1 approver in their
-            // base BU FOR THIS SPECIFIC REQUEST TYPE, there is no one below them to
-            // recommend it — skip the recommendation gate so Level 2 can act directly.
-            // If Level 1 is assigned to a DIFFERENT employee, normal L1→L2 applies.
-            const requesterBuEntry = allPersonnel.find(
-              (pp) => Number(pp.employeeId) === empId && String(pp.base).toLowerCase() === "yes",
-            );
-            const currentReqId = employeeRequestMap.get(selectedType);
-            const requesterIsLevel1 = requesterBuEntry && currentReqId !== undefined
-              ? allWorkflowsRaw.some(
-                  (w) =>
-                    w.businessUnitId === requesterBuEntry.businessUnitId &&
-                    String(w.employeeId) === String(empId) &&
-                    w.employeeRequestId === currentReqId &&
-                    w.approvalLevel === 1,
-                )
-              : false;
-            if (!requesterIsLevel1) {
-              // Normal path: require recommendation before Level 2 acts
-              if (recStatus !== "Recommended" && recStatus !== "Approved") return false;
-            }
-            // If requesterIsLevel1 for this specific request type, let it through
+            if (recStatus !== "disapproved") return false;
           }
         }
 
@@ -673,6 +624,7 @@ export default function ApprovalRequestPage() {
           `Employee #${r.employeeId}`,
         dateFiled: String(r[config.dateField] ?? ""),
         status: String(r[config.statusField] ?? ""),
+        recommendationStatus: String(r.recommendationStatus ?? ""),
         summary: config.getSummary(r),
         typeKey: selectedType,
         raw: r,
@@ -689,8 +641,6 @@ export default function ApprovalRequestPage() {
     buEmployeeIds,
     isAllBu,
     allBuEmployeeIds,
-    allWorkflowsRaw,
-    allPersonnel,
     selectedType,
     selectedStatus,
     recStatusFilter,
@@ -700,9 +650,7 @@ export default function ApprovalRequestPage() {
     nameFilter,
     employeeNameMap,
     employeeNoMap,
-    myApprovalLevel,
     loggedInId,
-    employeeRequestMap,
     isCoApproving,
     coApprovedForIds,
   ]);
@@ -738,37 +686,8 @@ export default function ApprovalRequestPage() {
     try {
       let res: Response;
 
-      if (config.useUpdateForAction) {
-        // Leave Application: send full DTO with modified fields
-        if (action === "recommend") {
-          const updated = {
-            ...row.raw,
-            recommendationStatus: "Recommended",
-            recommendingApprovalById: loggedInId,
-            recommendationMessage: remarks ?? "",
-          };
-          res = await fetchWithAuth(config.approveUrl(row.id), {
-            method: "PUT",
-            body: JSON.stringify(updated),
-          });
-        } else {
-          const updated = {
-            ...row.raw,
-            status: action === "approve" ? "Approved" : "Disapproved",
-            approvedById: loggedInId,
-            approvalMessage: remarks ?? "",
-          };
-          const url =
-            action === "approve"
-              ? config.approveUrl(row.id)
-              : config.disapproveUrl(row.id);
-          res = await fetchWithAuth(url, {
-            method: "PUT",
-            body: JSON.stringify(updated),
-          });
-        }
-      } else if (action === "recommend") {
-        res = await fetchWithAuth(config.recommendUrl!(row.id), {
+      if (action === "recommend") {
+        res = await fetchWithAuth(config.recommendUrl(row.id), {
           method: "PUT",
           body: JSON.stringify({
             recommendedById: loggedInId,
@@ -865,6 +784,62 @@ export default function ApprovalRequestPage() {
     );
     return wf?.approvalLevel ?? null;
   };
+
+  const isRequesterFirstLevelApprover = (row: RequestRow): boolean => {
+    const requesterBuEntry = allPersonnel.find(
+      (personnel) =>
+        Number(personnel.employeeId) === Number(row.employeeId) &&
+        String(personnel.base).toLowerCase() === "yes",
+    );
+    const requestId = employeeRequestMap.get(row.typeKey);
+    if (!requesterBuEntry || requestId === undefined) return false;
+
+    return allWorkflowsRaw.some(
+      (workflow) =>
+        workflow.businessUnitId === requesterBuEntry.businessUnitId &&
+        String(workflow.employeeId) === String(row.employeeId) &&
+        workflow.employeeRequestId === requestId &&
+        workflow.approvalLevel === 1,
+    );
+  };
+
+  const isRowActionable = (row: RequestRow): boolean => {
+    if (normalizeStatus(row.status) !== "pending") return false;
+
+    const level = getRowLevel(row);
+    if (level === null) return false;
+
+    const recommendationStatus = normalizeStatus(row.recommendationStatus);
+    if (level === 1) {
+      return isNotYetRecommended(recommendationStatus);
+    }
+
+    if (level === 2) {
+      if (isRequesterFirstLevelApprover(row)) {
+        return recommendationStatus !== "disapproved";
+      }
+      return recommendationStatus === "recommended" || recommendationStatus === "approved";
+    }
+
+    return recommendationStatus !== "disapproved";
+  };
+
+  const getUnavailableActionLabel = (row: RequestRow): string => {
+    const recommendationStatus = normalizeStatus(row.recommendationStatus);
+    if (recommendationStatus === "disapproved") {
+      return "Recommendation disapproved";
+    }
+    if (
+      getRowLevel(row) === 1 &&
+      (recommendationStatus === "recommended" || recommendationStatus === "approved")
+    ) {
+      return "Already recommended";
+    }
+    return "Awaiting recommendation";
+  };
+
+  const getRecommendationLabel = (status: string): string =>
+    isNotYetRecommended(normalizeStatus(status)) ? "Not Yet Recommended" : status;
 
   /**
    * Returns true when the current approver's level is the HIGHEST level
@@ -1296,10 +1271,9 @@ export default function ApprovalRequestPage() {
                     <th style={thStyle}>Date Filed</th>
                     <th style={thStyle}>Details</th>
                     <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Recommendation Status</th>
                     {selectedStatus === "Pending" && (
-                      <th style={thStyle}>
-                        {isAllBu ? "Actions" : myApprovalLevel === 1 ? "Actions (Recommend)" : "Actions (Approve)"}
-                      </th>
+                      <th style={thStyle}>Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -1320,31 +1294,46 @@ export default function ApprovalRequestPage() {
                         {row.summary}
                       </td>
                       <td style={tdStyle}>{statusBadge(row.status)}</td>
+                      <td style={tdStyle}>
+                        {statusBadge(getRecommendationLabel(row.recommendationStatus))}
+                      </td>
                       {selectedStatus === "Pending" && (
                         <td style={tdStyle}>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            {isFinalApprover(row) ? (
+                          {isRowActionable(row) ? (
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {isFinalApprover(row) ? (
+                                <button
+                                  style={approveBtnStyle}
+                                  onClick={() => handleAction(row, "approve")}
+                                >
+                                  Approve
+                                </button>
+                              ) : (
+                                <button
+                                  style={recommendBtnStyle}
+                                  onClick={() => handleAction(row, "recommend")}
+                                >
+                                  Recommend
+                                </button>
+                              )}
                               <button
-                                style={approveBtnStyle}
-                                onClick={() => handleAction(row, "approve")}
+                                style={disapproveBtnStyle}
+                                onClick={() => handleAction(row, "disapprove")}
                               >
-                                Approve
+                                Disapprove
                               </button>
-                            ) : (
-                              <button
-                                style={recommendBtnStyle}
-                                onClick={() => handleAction(row, "recommend")}
-                              >
-                                Recommend
-                              </button>
-                            )}
-                            <button
-                              style={disapproveBtnStyle}
-                              onClick={() => handleAction(row, "disapprove")}
+                            </div>
+                          ) : (
+                            <span
+                              style={{
+                                color: "#6b7280",
+                                fontSize: 12,
+                                fontStyle: "italic",
+                              }}
                             >
-                              Disapprove
-                            </button>
-                          </div>
+                              {getUnavailableActionLabel(row)}
+                            </span>
+                          )}
                         </td>
                       )}
                     </tr>
