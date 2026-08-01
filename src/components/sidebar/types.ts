@@ -5,5 +5,5 @@ export interface MenuItemProps {
   label: string;
   goto: string;
   isActive?: boolean;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 }

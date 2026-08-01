@@ -7,6 +7,7 @@ import Image from "next/image";
 import { MenuItem } from "./MenuItem";
 import styles from "@/styles/DashboardSidebar.module.scss";
 import { usePathname } from "next/navigation";
+import Swal from "sweetalert2";
 
 import { FaHome, FaUserFriends } from "react-icons/fa";
 import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
@@ -15,12 +16,8 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { localStorageUtil, type PortalModuleAccess } from "@/lib/utils/localStorageUtil";
 
 
-const UI_URL_ADMINISTRATIVE = runtimeConfig.getUiUrl("administrative");
-const UI_URL_HRM = runtimeConfig.getUiUrl("hrm");
-const UI_URL_TIMEKEEPING = runtimeConfig.getUiUrl("timekeeping");
-const UI_URL_PAYROLL = runtimeConfig.getUiUrl("payroll");
-
 type PortalModuleKey = keyof PortalModuleAccess;
+type SsoTarget = "administrative" | "hrm" | "timekeeping" | "payroll";
 
 type SidebarMenuItem = Pick<
   React.ComponentProps<typeof MenuItem>,
@@ -28,6 +25,7 @@ type SidebarMenuItem = Pick<
 > & {
   id: number;
   portalModule?: PortalModuleKey;
+  ssoTarget?: SsoTarget;
 };
 
 type PermissionRuleset = {
@@ -80,29 +78,33 @@ const menuItems: SidebarMenuItem[] = [
     id: 2,
     icon: <HiViewGrid />,
     label: "Administrative",
-    goto: `${UI_URL_ADMINISTRATIVE}/administrative/welcomepage`,
+    goto: "#",
     portalModule: "administrative",
+    ssoTarget: "administrative",
   },
   {
     id: 3,
     icon: <FaUserFriends />,
     label: "HR Management",
-    goto: `${UI_URL_HRM}/hr-management/welcomepage`,
+    goto: "#",
     portalModule: "hrManagement",
+    ssoTarget: "hrm",
   },
   {
     id: 4,
     icon: <MdAccessTime />,
     label: "Timekeeping",
-    goto: `${UI_URL_TIMEKEEPING}/time-keeping/welcomepage`,
+    goto: "#",
     portalModule: "timeKeeping",
+    ssoTarget: "timekeeping",
   },
   {
     id: 5,
     icon: <MdOutlineMiscellaneousServices />,
     label: "Payroll",
-    goto: `${UI_URL_PAYROLL}/payroll-management/welcomepage`,
+    goto: "#",
     portalModule: "payroll",
+    ssoTarget: "payroll",
   },
 ];
 
@@ -147,6 +149,49 @@ export default function Sidebar() {
   const [isApprover, setIsApprover] = useState(false);
   const [isInWorkflow, setIsInWorkflow] = useState(false);
   const [portalModuleAccess, setPortalModuleAccess] = useState<PortalModuleAccess>({ ...NO_PORTAL_MODULE_ACCESS });
+  const [launchingTarget, setLaunchingTarget] = useState<SsoTarget | null>(null);
+
+  const launchSso = async (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    target: SsoTarget
+  ) => {
+    event.preventDefault();
+    if (launchingTarget) return;
+
+    setLaunchingTarget(target);
+    try {
+      const response = await fetchWithAuth(
+        `${runtimeConfig.getApiUrl("administrative")}/api/sso/launch`,
+        { method: "POST", body: JSON.stringify({ target }) }
+      );
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null) as
+          | { detail?: string; message?: string }
+          | null;
+        throw new Error(errorBody?.detail ?? errorBody?.message ?? "You are not allowed to open this module.");
+      }
+
+      const launch = await response.json() as { code: string };
+      const destinations: Record<SsoTarget, { app: Parameters<typeof runtimeConfig.getUiUrl>[0]; path: string }> = {
+        administrative: { app: "administrative", path: "/administrative/sso" },
+        hrm: { app: "hrm", path: "/hr-management/sso" },
+        timekeeping: { app: "timekeeping", path: "/time-keeping/sso" },
+        payroll: { app: "payroll", path: "/payroll-management/sso" },
+      };
+      const destination = destinations[target];
+      const callbackUrl = new URL(destination.path, runtimeConfig.getUiUrl(destination.app));
+      callbackUrl.hash = new URLSearchParams({ code: launch.code }).toString();
+      window.location.assign(callbackUrl.toString());
+    } catch (error) {
+      setLaunchingTarget(null);
+      await Swal.fire({
+        title: "Unable to open module",
+        text: error instanceof Error ? error.message : "Single sign-on failed.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
+  };
 
   // Employee info state
   const [empInfo, setEmpInfo] = useState({
@@ -330,10 +375,10 @@ useEffect(() => {
           <MenuItem
             key={item.id}
             icon={item.icon}
-            label={item.label}
+            label={launchingTarget === item.ssoTarget ? `Opening ${item.label}...` : item.label}
             goto={item.goto}
             isActive={pathname === item.goto}
-            onClick={() => {}}
+            onClick={item.ssoTarget ? (event) => void launchSso(event, item.ssoTarget!) : undefined}
           />
           ))}
 
