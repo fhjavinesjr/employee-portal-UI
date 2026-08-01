@@ -217,7 +217,21 @@ useEffect(() => {
   // source of truth and refreshes the cache whenever the sidebar mounts.
   useEffect(() => {
     let cancelled = false;
+    const employeeNo = localStorageUtil.getEmployeeNo()?.trim().toLowerCase();
     const storedRole = localStorageUtil.getEmployeeRole()?.trim();
+
+    // The installation account is the system super administrator. Its access
+    // must never depend on a permission-ruleset row or cached Portal flags.
+    if (employeeNo === "admin") {
+      setPortalModuleAccess({ ...ALL_PORTAL_MODULE_ACCESS });
+      if (storedRole) {
+        localStorageUtil.setPortalModuleAccess(ALL_PORTAL_MODULE_ACCESS, storedRole);
+      } else {
+        localStorageUtil.clearPortalModuleAccess();
+      }
+      return () => { cancelled = true; };
+    }
+
     if (!storedRole) {
       localStorageUtil.clearPortalModuleAccess();
       setPortalModuleAccess({ ...NO_PORTAL_MODULE_ACCESS });
