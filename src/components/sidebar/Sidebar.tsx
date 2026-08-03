@@ -17,7 +17,7 @@ import { localStorageUtil, type PortalModuleAccess } from "@/lib/utils/localStor
 
 
 type PortalModuleKey = keyof PortalModuleAccess;
-type SsoTarget = "administrative" | "hrm" | "timekeeping" | "payroll";
+type SsoTarget = "administrative" | "hrm" | "timekeeping" | "payroll" | "primehr";
 
 type SidebarMenuItem = Pick<
   React.ComponentProps<typeof MenuItem>,
@@ -40,6 +40,7 @@ const NO_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
   hrManagement: false,
   timeKeeping: false,
   payroll: false,
+  primeHr: false,
 };
 
 const ALL_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
@@ -47,6 +48,7 @@ const ALL_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
   hrManagement: true,
   timeKeeping: true,
   payroll: true,
+  primeHr: true,
 };
 
 const parsePortalModuleAccess = (
@@ -61,6 +63,7 @@ const parsePortalModuleAccess = (
       hrManagement: access.hrManagement === true,
       timeKeeping: access.timeKeeping === true,
       payroll: access.payroll === true,
+      primeHr: access.primeHr === true,
     };
   } catch {
     return { ...NO_PORTAL_MODULE_ACCESS };
@@ -105,6 +108,14 @@ const menuItems: SidebarMenuItem[] = [
     goto: "#",
     portalModule: "payroll",
     ssoTarget: "payroll",
+  },
+  {
+    id: 6,
+    icon: <FaUserFriends />,
+    label: "PRIME-HRM",
+    goto: "#",
+    portalModule: "primeHr",
+    ssoTarget: "primehr",
   },
 ];
 
@@ -177,6 +188,7 @@ export default function Sidebar() {
         hrm: { app: "hrm", path: "/hr-management/sso" },
         timekeeping: { app: "timekeeping", path: "/time-keeping/sso" },
         payroll: { app: "payroll", path: "/payroll-management/sso" },
+        primehr: { app: "primehr", path: "/prime-hr/sso" },
       };
       const destination = destinations[target];
       const callbackUrl = new URL(destination.path, runtimeConfig.getUiUrl(destination.app));

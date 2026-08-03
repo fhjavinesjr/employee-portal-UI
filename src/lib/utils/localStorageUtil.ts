@@ -8,6 +8,7 @@ export type PortalModuleAccess = {
   hrManagement: boolean;
   timeKeeping: boolean;
   payroll: boolean;
+  primeHr: boolean;
 };
 
 const isPortalModuleAccess = (value: unknown): value is PortalModuleAccess => {
@@ -17,7 +18,8 @@ const isPortalModuleAccess = (value: unknown): value is PortalModuleAccess => {
     typeof access.administrative === "boolean" &&
     typeof access.hrManagement === "boolean" &&
     typeof access.timeKeeping === "boolean" &&
-    typeof access.payroll === "boolean"
+    typeof access.payroll === "boolean" &&
+    typeof access.primeHr === "boolean"
   );
 };
 

@@ -11,14 +11,15 @@
 
 import { localStorageUtil } from "./localStorageUtil";
 
-type ApiService = "administrative" | "hrm" | "timekeeping" | "payroll";
-type UiApp = "administrative" | "hrm" | "timekeeping" | "payroll" | "employee-portal";
+type ApiService = "administrative" | "hrm" | "timekeeping" | "payroll" | "primehr";
+type UiApp = "administrative" | "hrm" | "timekeeping" | "payroll" | "primehr" | "employee-portal";
 
 const API_KEY_MAP: Record<ApiService, string> = {
   administrative: "api.url.administrative",
   hrm: "api.url.hrm",
   timekeeping: "api.url.timekeeping",
   payroll: "api.url.payroll",
+  primehr: "api.url.primehr",
 };
 
 const UI_KEY_MAP: Record<UiApp, string> = {
@@ -26,6 +27,7 @@ const UI_KEY_MAP: Record<UiApp, string> = {
   hrm: "ui.url.hrm",
   timekeeping: "ui.url.timekeeping",
   payroll: "ui.url.payroll",
+  primehr: "ui.url.primehr",
   "employee-portal": "ui.url.employee-portal",
 };
 
@@ -34,6 +36,7 @@ const API_ENV_MAP: Record<ApiService, string | undefined> = {
   hrm: process.env.NEXT_PUBLIC_API_BASE_URL_HRM,
   timekeeping: process.env.NEXT_PUBLIC_API_BASE_URL_TIMEKEEPING,
   payroll: process.env.NEXT_PUBLIC_API_BASE_URL_PAYROLL,
+  primehr: process.env.NEXT_PUBLIC_API_BASE_URL_PRIMEHR,
 };
 
 const UI_ENV_MAP: Record<UiApp, string> = {
@@ -41,6 +44,7 @@ const UI_ENV_MAP: Record<UiApp, string> = {
   hrm: process.env.NEXT_PUBLIC_UI_URL_HRM ?? "http://localhost:3085",
   timekeeping: process.env.NEXT_PUBLIC_UI_URL_TIMEKEEPING ?? "http://localhost:3083",
   payroll: process.env.NEXT_PUBLIC_UI_URL_PAYROLL ?? "http://localhost:3087",
+  primehr: process.env.NEXT_PUBLIC_UI_URL_PRIMEHR ?? "http://localhost:3086",
   "employee-portal": "http://localhost:3081",
 };
 
