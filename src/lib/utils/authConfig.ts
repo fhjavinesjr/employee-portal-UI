@@ -12,6 +12,7 @@ export const AUTH_CONFIG = {
     "/administrative/login",
     "/administrative/registration",
     "/employee-portal/login",
+    "/employee-portal/activate",
     "/employee-portal/registration",
     "/hr-management/login",
     "/hr-management/registration",

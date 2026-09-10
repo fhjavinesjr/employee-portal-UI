@@ -13,7 +13,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const pathname = usePathname() || "";
 
   // Pages where we want to hide sidebar/header
-  const publicPages = ["/employee-portal/login", "/employee-portal/registration"];
+  const publicPages = ["/employee-portal/login", "/employee-portal/activate"];
   const hideLayout = publicPages.includes(pathname);
 
   if (hideLayout) {
