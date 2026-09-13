@@ -6,6 +6,7 @@ import Swal from "sweetalert2";
 import modalStyles from "@/styles/Modal.module.scss";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
+import { readApiError } from "@/lib/utils/apiError";
 
 const API_HRM = runtimeConfig.getApiUrl("hrm");
 const API_ADMIN = runtimeConfig.getApiUrl("administrative");
@@ -709,8 +710,7 @@ export default function ApprovalRequestPage() {
       }
 
       if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        throw new Error(errText || "Action failed");
+        throw new Error(await readApiError(res, "Action failed"));
       }
 
       Toast.fire({

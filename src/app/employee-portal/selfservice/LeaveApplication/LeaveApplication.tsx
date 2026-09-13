@@ -9,8 +9,18 @@ import LeaveApplicationTable from "@/components/tables/leaveapplicationTable";
 import LeaveMonetizationTable, { MonetizationRecord } from "@/components/tables/leaveMonetizationTable";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
+import { readApiError } from "@/lib/utils/apiError";
+import {
+  leaveDetailKind,
+  parseLeaveDetails,
+  serializeLeaveDetails,
+  SICK_LOCATION_OPTIONS,
+  STUDY_LEAVE_OPTIONS,
+  VACATION_LOCATION_OPTIONS,
+} from "@/lib/utils/leaveFormDetails";
 
 const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
+const API_BASE_URL_ADMINISTRATIVE = runtimeConfig.getApiUrl("administrative");
 
 const MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE = 10;
 
@@ -353,6 +363,7 @@ export default function LeaveApplication() {
     from: "",
     to: "",
     commutation: "requested",
+    detailOption: "",
     details: "",
     noOfDays: "",
   };
@@ -374,7 +385,24 @@ export default function LeaveApplication() {
   const [editingMonetizationId, setEditingMonetizationId] = useState<number | null>(null);
   const [monetizationForm, setMonetizationForm] = useState(initialMonetizationForm);
 
-  const leaveTypes = Object.values(LEAVE_TYPES);
+  const [leaveTypes, setLeaveTypes] = useState<string[]>(Object.values(LEAVE_TYPES));
+
+  useEffect(() => {
+    const fetchLeaveTypes = async () => {
+      try {
+        const response = await fetchWithAuth(`${API_BASE_URL_ADMINISTRATIVE}/api/leaveTypes/get-all`);
+        if (!response.ok) return;
+        const data: { leaveTypesId: number; code: string; name: string }[] = await response.json();
+        const configuredTypes = data
+          .map((item) => item.name.trim())
+          .filter((name) => name && name !== "Leave Monetization");
+        if (configuredTypes.length > 0) setLeaveTypes(configuredTypes);
+      } catch (error) {
+        console.error("Unable to load configured leave types; using the local fallback.", error);
+      }
+    };
+    void fetchLeaveTypes();
+  }, []);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -505,6 +533,10 @@ export default function LeaveApplication() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    if (name === "leaveType") {
+      setForm((prev) => ({ ...prev, leaveType: value, detailOption: "", details: "" }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -578,7 +610,11 @@ export default function LeaveApplication() {
         endDate: form.to || null,
         noOfDays: null,
         commutation: form.commutation || null,
-        details: form.details || null,
+        details: serializeLeaveDetails(
+          leaveDetailKind(form.leaveType),
+          form.detailOption,
+          form.details,
+        ) || null,
         status: "Pending",
       };
 
@@ -611,6 +647,7 @@ export default function LeaveApplication() {
   };
 
   const handleEditLeave = (r: TableLeaveData) => {
+    const parsedDetails = parseLeaveDetails(r.leaveType, r.details);
     setEditingId(r.id);
     setForm({
       dateFiled: r.dateFiled,
@@ -618,7 +655,8 @@ export default function LeaveApplication() {
       from: r.from,
       to: r.to,
       commutation: r.commutation || "requested",
-      details: r.details,
+      detailOption: parsedDetails.option,
+      details: parsedDetails.details,
       noOfDays: "",
     });
     setActiveTab("apply");
@@ -642,8 +680,16 @@ export default function LeaveApplication() {
       );
 
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Failed to generate leave application report.");
+        const diagnostic = await response.text();
+        console.error("Leave application report request failed:", {
+          status: response.status,
+          body: diagnostic,
+        });
+        throw new Error(
+          response.status >= 500
+            ? "The leave application report is temporarily unavailable. Please try again or contact HRIS support."
+            : diagnostic || "Failed to generate leave application report."
+        );
       }
 
       const blob = await response.blob();
@@ -696,6 +742,7 @@ export default function LeaveApplication() {
     }
     const noOfDaysSL = parseFloat(monetizationForm.noOfDaysSL) || 0;
     const noOfDaysVL = parseFloat(monetizationForm.noOfDaysVL) || 0;
+    const totalDays = noOfDaysSL + noOfDaysVL;
 
     if (
       noOfDaysSL > MAX_MONETIZATION_DAYS_PER_LEAVE_TYPE ||
@@ -709,8 +756,12 @@ export default function LeaveApplication() {
       return;
     }
 
-    if (noOfDaysSL + noOfDaysVL <= 0) {
-      Swal.fire("Validation", "Please enter at least some days to monetize.", "warning");
+    if (totalDays < 10) {
+      Swal.fire(
+        "Validation",
+        `Leave monetization requires at least 10 total days. Total days entered: ${totalDays.toFixed(1)}.`,
+        "warning"
+      );
       return;
     }
     setIsMonetizationSubmitting(true);
@@ -730,7 +781,9 @@ export default function LeaveApplication() {
         method: isUpdate ? "PUT" : "POST",
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Failed to submit leave monetization."));
+      }
       Toast.fire({ icon: "success", title: isUpdate ? "Monetization updated!" : "Monetization request submitted!" });
       setMonetizationForm(initialMonetizationForm);
       setEditingMonetizationId(null);
@@ -773,8 +826,16 @@ export default function LeaveApplication() {
       );
 
       if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Failed to generate leave monetization report.");
+        const diagnostic = await response.text();
+        console.error("Leave monetization report request failed:", {
+          status: response.status,
+          body: diagnostic,
+        });
+        throw new Error(
+          response.status >= 500
+            ? "The leave monetization report is temporarily unavailable. Please try again or contact HRIS support."
+            : diagnostic || "Failed to generate leave monetization report."
+        );
       }
 
       const blob = await response.blob();
@@ -821,6 +882,7 @@ export default function LeaveApplication() {
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const balInfo = balanceLabelFor(form.leaveType);
+  const detailKind = leaveDetailKind(form.leaveType);
   const displayBalance = balInfo && balance ? (balance[balInfo.key] as number | null) : null;
   const vlForForcedDisplay = form.leaveType === LEAVE_TYPES.FORCED && balance ? balance.vacationLeaveBalance : null;
 
@@ -1004,7 +1066,7 @@ export default function LeaveApplication() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label>Total Days <small style={{ fontWeight: 400, color: "#6b7280" }}>(min. 10 required per CSC rules)</small></label>
+                  <label>Total Days <small style={{ fontWeight: 400, color: "#6b7280" }}>(minimum 10 days for this workflow)</small></label>
                   <input
                     type="text"
                     readOnly
@@ -1255,17 +1317,72 @@ export default function LeaveApplication() {
               </div>
             </div>
 
-            {/* Details */}
-            <div className={styles.formGroup}>
-              <label className={styles.labelDetails}>Details</label>
-              <textarea
-                name="details"
-                value={form.details}
-                onChange={handleChange}
-                placeholder="Enter details..."
-                required
-              />
-            </div>
+            {detailKind === "study" && (
+              <div className={styles.formGroup}>
+                <label>In Case of Study Leave</label>
+                <select
+                  className={styles.selectBase}
+                  name="detailOption"
+                  value={form.detailOption}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="" disabled>Select</option>
+                  {STUDY_LEAVE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(detailKind === "vacation" || detailKind === "sick") && (
+              <div className={`${styles.formGroup} ${styles.detailFieldsGroup}`}>
+                <label>Where Leave Will Be Spent In Case Of</label>
+                <div className={styles.detailRow}>
+                  <label htmlFor="leave-detail-option">
+                    {detailKind === "vacation" ? "In Case of VL" : "In Case of SL"}
+                  </label>
+                  <select
+                    id="leave-detail-option"
+                    name="detailOption"
+                    value={form.detailOption}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="" disabled>Select</option>
+                    {(detailKind === "vacation" ? VACATION_LOCATION_OPTIONS : SICK_LOCATION_OPTIONS)
+                      .map((option) => (
+                        <option key={option} value={option}>{option} (specify)</option>
+                      ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="details"
+                    value={form.details}
+                    onChange={handleChange}
+                    placeholder={detailKind === "vacation" ? "Specify location" : "Specify illness"}
+                    maxLength={450}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {(detailKind === "women" || detailKind === "general") && (
+              <div className={styles.formGroup}>
+                <label className={styles.labelDetails}>
+                  {detailKind === "women" ? "Illness (specify)" : "Details"}
+                </label>
+                <textarea
+                  name="details"
+                  value={form.details}
+                  onChange={handleChange}
+                  placeholder={detailKind === "general" ? "Enter details..." : "Specify illness..."}
+                  required
+                  maxLength={500}
+                />
+              </div>
+            )}
 
             {/* Buttons */}
             <div className={styles.buttonGroup}>
