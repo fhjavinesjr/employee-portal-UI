@@ -81,6 +81,18 @@ function calendarDaysAdvance(filed: Date, start: Date): number {
   return Math.round((s.getTime() - f.getTime()) / 86_400_000);
 }
 
+function inclusiveCalendarDays(start: Date, end: Date): number {
+  const first = new Date(start); first.setHours(0, 0, 0, 0);
+  const last = new Date(end); last.setHours(0, 0, 0, 0);
+  return Math.round((last.getTime() - first.getTime()) / 86_400_000) + 1;
+}
+
+function isInactiveLeave(record: TableLeaveData): boolean {
+  return [record.status, record.approvedStatus]
+    .filter((status): status is string => Boolean(status))
+    .some((status) => ["disapproved", "rejected", "cancelled", "canceled"].includes(status.toLowerCase()));
+}
+
 interface ValidationResult {
   /** Blocking — prevents submission. */
   errors: string[];
@@ -96,6 +108,8 @@ function computeValidation(
   from: string,
   to: string,
   balance: LeaveBalanceDTO | null,
+  existingLeaves: TableLeaveData[],
+  editingId: number | null,
 ): ValidationResult {
   const result: ValidationResult = { errors: [], warnings: [], notices: [] };
   if (!leaveType || !dateFiled || !from) return result;
@@ -111,6 +125,7 @@ function computeValidation(
   }
 
   const duration = countWorkingDays(start, end); // working days of the leave
+  const calendarDuration = inclusiveCalendarDays(start, end);
   const advanceWorkingDays = workingDaysAdvance(filed, start);
   const advanceCalendarDays = calendarDaysAdvance(filed, start);
 
@@ -188,23 +203,58 @@ function computeValidation(
     }
 
     case LEAVE_TYPES.PATERNITY: {
+      if (duration > 7) {
+        result.errors.push(
+          `Paternity Leave cannot exceed 7 working days per filing. The selected dates contain ${duration} working days.`
+        );
+      }
       result.notices.push(
-        "Paternity Leave (7 working days, RA 8187) must be filed within 60 days of the date of delivery."
+        "Paternity Leave is limited to 7 days and may be used continuously or intermittently on days immediately before, during, or after childbirth or miscarriage, but not later than 60 days after delivery."
       );
       break;
     }
 
     case LEAVE_TYPES.MATERNITY: {
+      if (calendarDuration > 105) {
+        result.errors.push(
+          `Maternity Leave cannot exceed 105 calendar days. The selected range contains ${calendarDuration} calendar days.`
+        );
+      }
       result.notices.push(
-        "Expanded Maternity Leave covers 105 working days with full pay (RA 11210). " +
-        "File before confinement when possible."
+        "Expanded Maternity Leave for live childbirth covers up to 105 calendar days with full pay and must be taken continuously and without interruption. File at least 30 days in advance when possible."
       );
       break;
     }
 
     case LEAVE_TYPES.SOLO_PARENT: {
+      for (let year = start.getFullYear(); year <= end.getFullYear(); year++) {
+        const yearStart = new Date(year, 0, 1);
+        const yearEnd = new Date(year, 11, 31);
+        const selectedDays = countWorkingDays(
+          start > yearStart ? start : yearStart,
+          end < yearEnd ? end : yearEnd,
+        );
+        const filedDays = existingLeaves
+          .filter((record) => record.id !== editingId)
+          .filter((record) => record.leaveType.toLowerCase() === LEAVE_TYPES.SOLO_PARENT.toLowerCase())
+          .filter((record) => record.from && record.to && !isInactiveLeave(record))
+          .reduce((total, record) => {
+            const existingStart = new Date(record.from);
+            const existingEnd = new Date(record.to);
+            if (existingEnd < yearStart || existingStart > yearEnd) return total;
+            return total + countWorkingDays(
+              existingStart > yearStart ? existingStart : yearStart,
+              existingEnd < yearEnd ? existingEnd : yearEnd,
+            );
+          }, 0);
+        if (filedDays + selectedDays > 7) {
+          result.errors.push(
+            `Solo Parent Leave is limited to 7 working days in ${year}. You have ${Math.max(0, 7 - filedDays)} working day(s) remaining.`
+          );
+        }
+      }
       result.notices.push(
-        "Solo Parent Leave (7 days/year, RA 8972) requires a valid Solo Parent Identification Card."
+        "Solo Parent Leave is limited to 7 working days per year, may be staggered or continuous, and requires a valid Solo Parent Identification Card."
       );
       break;
     }
@@ -279,6 +329,7 @@ interface ApiLeaveApplicationDTO {
   approvalMessage: string | null;
   recommendingApprovalById?: number | null;
   approvedById?: number | null;
+  withPay?: boolean | null;
 }
 
 interface EmployeeBasicInfo {
@@ -302,6 +353,7 @@ interface TableLeaveData {
   approvedStatus: string | null;
   recommendingOfficer: string;
   approvedBy: string;
+  withPay: boolean;
 }
 
 interface ApiMonetizationDTO {
@@ -366,6 +418,7 @@ export default function LeaveApplication() {
     detailOption: "",
     details: "",
     noOfDays: "",
+    withPay: true,
   };
 
   const initialMonetizationForm = { dateFiled: today, noOfDaysSL: "", noOfDaysVL: "", reason: "" };
@@ -455,6 +508,7 @@ export default function LeaveApplication() {
             status: d.status,
             recommendationStatus: d.recommendationStatus ?? null,
             approvedStatus: d.approvedStatus ?? null,
+            withPay: d.withPay !== false,
             recommendingOfficer: d.recommendingApprovalById
               ? (nameMap.get(d.recommendingApprovalById) ?? "—")
               : "—",
@@ -532,6 +586,11 @@ export default function LeaveApplication() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
+    if (e.target instanceof HTMLInputElement && e.target.type === "checkbox") {
+      const { name, checked } = e.target;
+      setForm((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
     const { name, value } = e.target;
     if (name === "leaveType") {
       setForm((prev) => ({ ...prev, leaveType: value, detailOption: "", details: "" }));
@@ -543,8 +602,8 @@ export default function LeaveApplication() {
   // ── Live CSC validation (derived — no state needed) ───────────────────────
 
   const validation = useMemo(
-    () => computeValidation(form.leaveType, form.dateFiled, form.from, form.to, balance),
-    [form.leaveType, form.dateFiled, form.from, form.to, balance],
+    () => computeValidation(form.leaveType, form.dateFiled, form.from, form.to, balance, records, editingId),
+    [form.leaveType, form.dateFiled, form.from, form.to, balance, records, editingId],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -616,6 +675,7 @@ export default function LeaveApplication() {
           form.details,
         ) || null,
         status: "Pending",
+        withPay: form.withPay,
       };
 
       const url = editingId !== null
@@ -658,6 +718,7 @@ export default function LeaveApplication() {
       detailOption: parsedDetails.option,
       details: parsedDetails.details,
       noOfDays: "",
+      withPay: r.withPay,
     });
     setActiveTab("apply");
   };
@@ -1151,6 +1212,15 @@ export default function LeaveApplication() {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginTop: "0.5rem", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="withPay"
+                  checked={form.withPay}
+                  onChange={handleChange}
+                />
+                With Pay
+              </label>
             </div>
 
             {/* Balance indicator — shown for VL, SL, SPL, Forced Leave */}

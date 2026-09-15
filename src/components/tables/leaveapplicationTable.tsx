@@ -18,6 +18,7 @@ interface Leave {
   approvedStatus: string | null;
   recommendingOfficer: string;
   approvedBy: string;
+  withPay: boolean;
 }
 
 // Define the props that the component expects
@@ -44,6 +45,7 @@ export default function LeaveApplicationTable({
     const q = search.toLowerCase();
     return (
       leave.leaveType.toLowerCase().includes(q) ||
+      (leave.withPay === false && "without pay".includes(q)) ||
       leave.dateFiled.toLowerCase().includes(q) ||
       leave.status.toLowerCase().includes(q)
     );
@@ -114,7 +116,9 @@ export default function LeaveApplicationTable({
                 <td>
                   {leave.from} - {leave.to}
                 </td>
-                <td>{leave.leaveType}</td>
+                <td>
+                  {leave.leaveType}{leave.withPay === false ? " (Without Pay)" : ""}
+                </td>
                 <td>{leave.recommendingOfficer ?? "—"}</td>
                 <td>{leave.approvedBy ?? "—"}</td>
                 <td>{leave.status}</td>

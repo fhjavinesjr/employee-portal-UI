@@ -89,11 +89,7 @@ export default function PassSlip() {
 
   const handlePurposeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
-    setForm((prev) => ({
-      ...prev, purpose: value,
-      departureTime: value === "Official" ? "08:00" : prev.departureTime,
-      arrivalTime: value === "Official" ? "17:00" : prev.arrivalTime,
-    }));
+    setForm((prev) => ({ ...prev, purpose: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -101,13 +97,16 @@ export default function PassSlip() {
     const empId = localStorageUtil.getEmployeeId();
     if (!empId) { Swal.fire({ icon: "warning", title: "Session expired. Please log in again." }); return; }
     if (!form.departureTime) { Swal.fire({ icon: "warning", title: "Departure time is required" }); return; }
+    if (!form.arrivalTime) { Swal.fire({ icon: "warning", title: "Return time is required" }); return; }
+    if (form.arrivalTime <= form.departureTime) { Swal.fire({ icon: "warning", title: "Return time must be later than departure time" }); return; }
+    if (!form.details.trim()) { Swal.fire({ icon: "warning", title: "Pass slip details are required" }); return; }
     setIsSubmitting(true);
     try {
       const payload: PassSlipDTO = {
         employeeId: Number(empId), dateFiled: form.dateFiled,
         passSlipDate: form.passSlipDate, purpose: form.purpose,
         departureTime: form.departureTime + ":00",
-        arrivalTime: form.arrivalTime ? form.arrivalTime + ":00" : "",
+        arrivalTime: form.arrivalTime + ":00",
         details: form.details, status: "Pending",
       };
       const url = editingId !== null
@@ -331,17 +330,21 @@ export default function PassSlip() {
                 <div className={styles.formGroup}>
                   <label>Departure Time</label>
                   <input type="time" value={form.departureTime} onChange={(e) => setForm({ ...form, departureTime: e.target.value })}
-                    disabled={form.purpose === "Official"} required />
+                    required />
                 </div>
                 <div className={styles.formGroup}>
                   <label>Arrival Time</label>
                   <input type="time" value={form.arrivalTime} onChange={(e) => setForm({ ...form, arrivalTime: e.target.value })}
-                    disabled={form.purpose === "Official"} />
+                    min={form.departureTime || undefined} required />
                 </div>
               </div>
               <div className={styles.formGroup}>
                 <label>Details</label>
-                <textarea value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} rows={3} />
+                <textarea value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} rows={3} required />
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#4b5563" }}>
+                Personal pass-slip time is reflected as undertime and charged under leave/payroll rules.
+                Official time is excused only for the approved interval covered by this request.
               </div>
               <div className={styles.buttonGroup}>
                 <button type="submit" disabled={isSubmitting} className={styles.submitBtn}>
