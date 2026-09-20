@@ -58,6 +58,28 @@ interface OvertimeRequestDTO {
   approvedById?: number | null;
   approvedAt?: string | null;
   approvalRemarks?: string | null;
+  groupRequestId?: string | null;
+  filedByEmployeeId?: number | null;
+  businessUnitId?: number | null;
+  supervisorFiled?: boolean;
+  participantEmployeeIds?: number[];
+  expectedOutput?: string;
+  discrepancyRemarks?: string | null;
+  discrepancyReportedAt?: string | null;
+}
+
+interface SupervisedUnit {
+  businessUnitId: number;
+  businessUnitName: string;
+  role: "HEAD" | "OIC";
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  personnelEmployeeIds: number[];
+}
+
+interface PersonnelAssignment {
+  employeeId: number;
+  head: boolean;
 }
 
 interface FormState {
@@ -70,6 +92,7 @@ interface FormState {
   authorityReference: string;
   emergencyPostFiling: boolean;
   emergencyJustification: string;
+  expectedOutput: string;
 }
 
 const SPECIAL_DUTY_TYPES = ["HOLIDAY_DUTY", "DAY_OFF_DUTY", "REST_DAY_DUTY"];
@@ -229,7 +252,7 @@ const Toast = Swal.mixin({
 });
 
 export default function OvertimeRequest() {
-  const [activeTab, setActiveTab] = useState<"table" | "apply">("table");
+  const [activeTab, setActiveTab] = useState<"table" | "apply" | "staff">("table");
   const [records, setRecords] = useState<OvertimeRequestDTO[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -244,6 +267,11 @@ export default function OvertimeRequest() {
   const [timeSuggestionMessage, setTimeSuggestionMessage] = useState("");
   const [regularSuggestionVersion, setRegularSuggestionVersion] = useState(0);
   const processedRegularSuggestion = useRef(0);
+  const [hasSupervisorAssignment, setHasSupervisorAssignment] = useState(false);
+  const [supervisedUnits, setSupervisedUnits] = useState<SupervisedUnit[]>([]);
+  const [selectedBusinessUnitId, setSelectedBusinessUnitId] = useState<number | null>(null);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<Set<number>>(new Set());
+  const [staffRecords, setStaffRecords] = useState<OvertimeRequestDTO[]>([]);
 
   const toLocalDateTimeInput = (date: Date) => toLocalDateTimeValue(date);
   const today = toLocalDateTimeInput(new Date()).slice(0, 10);
@@ -263,6 +291,7 @@ export default function OvertimeRequest() {
     authorityReference: "",
     emergencyPostFiling: false,
     emergencyJustification: "",
+    expectedOutput: "",
   });
 
   const [form, setForm] = useState<FormState>(createEmptyForm);
@@ -562,10 +591,112 @@ export default function OvertimeRequest() {
     } catch {}
   }, []);
 
+  const fetchStaffRecords = useCallback(async () => {
+    try {
+      const response = await fetchWithAuth(`${API_BASE_URL_HRM}/api/overtime-request/staff/filed-by-me`);
+      if (!response.ok) throw new Error();
+      const data: OvertimeRequestDTO[] = await response.json();
+      setStaffRecords(Array.isArray(data) ? data : []);
+    } catch {
+      setStaffRecords([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    const employeeId = Number(localStorageUtil.getEmployeeId());
+    if (!employeeId) return;
+    fetchWithAuth(`${API_BASE_URL_ADMINISTRATIVE}/api/manage-personnel/get-all`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((rows: PersonnelAssignment[]) => {
+        setHasSupervisorAssignment(rows.some((row) => Number(row.employeeId) === employeeId && Boolean(row.head)));
+      })
+      .catch(() => setHasSupervisorAssignment(false));
+    void fetchStaffRecords();
+  }, [fetchStaffRecords]);
+
+  useEffect(() => {
+    if (activeTab !== "staff" || !form.dateTimeFrom || !form.dateTimeTo) return;
+    const fromDate = localDateKey(form.dateTimeFrom);
+    const toDate = localDateKey(form.dateTimeTo);
+    const params = new URLSearchParams({ fromDate, toDate });
+    fetchWithAuth(`${API_BASE_URL_ADMINISTRATIVE}/api/manage-personnel/supervised-units?${params.toString()}`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((rows: SupervisedUnit[]) => {
+        setSupervisedUnits(Array.isArray(rows) ? rows : []);
+        setSelectedBusinessUnitId((current) => rows.some((row) => row.businessUnitId === current)
+          ? current
+          : (rows[0]?.businessUnitId ?? null));
+      })
+      .catch(() => {
+        setSupervisedUnits([]);
+        setSelectedBusinessUnitId(null);
+      });
+  }, [activeTab, form.dateTimeFrom, form.dateTimeTo]);
+
   useEffect(() => {
     fetchRecords();
     fetchEmployeeNames();
   }, [fetchRecords, fetchEmployeeNames]);
+
+  const calculateStaffBreakMinutes = async (employeeId: number): Promise<number> => {
+    const requestStart = new Date(form.dateTimeFrom);
+    const requestEnd = new Date(form.dateTimeTo);
+    const specialDuty = SPECIAL_DUTY_TYPES.includes(form.workType);
+    const rangeStart = new Date(requestStart);
+    rangeStart.setHours(0, 0, 0, 0);
+    const rangeEnd = new Date(requestEnd);
+    rangeEnd.setHours(23, 59, 59, 0);
+    let schedules: WorkScheduleDTO[];
+    if (specialDuty) {
+      schedules = [{
+        tsCode: form.dutyShiftCode,
+        wsDateTime: formatWorkScheduleParameter(requestStart),
+        isDayOff: false,
+      }];
+    } else {
+      const params = new URLSearchParams({
+        employeeId: String(employeeId),
+        monthStart: formatWorkScheduleParameter(rangeStart),
+        monthEnd: formatWorkScheduleParameter(rangeEnd),
+      });
+      const response = await fetchWithAuth(
+        `${API_BASE_URL_TIMEKEEPING}/api/getListByEmployeeAndDateRange/work-schedule?${params.toString()}`,
+      );
+      if (!response.ok && response.status !== 204) {
+        throw new Error(`Unable to load the Work Schedule for ${nameMap.get(employeeId) ?? `Employee #${employeeId}`}.`);
+      }
+      schedules = response.status === 204 ? [] : await response.json();
+    }
+    return calculateScheduleBreak(schedules, timeShifts, requestStart, requestEnd).breakMinutes;
+  };
+
+  const submitStaffRequest = async () => {
+    if (!selectedBusinessUnitId) throw new Error("Select an authorized Business Unit.");
+    if (selectedStaffIds.size === 0) throw new Error("Select at least one staff member.");
+    if (!form.expectedOutput.trim()) throw new Error("Expected output is required.");
+    const participants = await Promise.all(Array.from(selectedStaffIds).map(async (employeeId) => ({
+      employeeId,
+      breakMinutes: await calculateStaffBreakMinutes(employeeId),
+    })));
+    const response = await fetchWithAuth(`${API_BASE_URL_HRM}/api/overtime-request/staff/create`, {
+      method: "POST",
+      body: JSON.stringify({
+        businessUnitId: selectedBusinessUnitId,
+        dateFiled: form.dateFiled,
+        dateTimeFrom: `${form.dateTimeFrom}:00`,
+        dateTimeTo: `${form.dateTimeTo}:00`,
+        purpose: form.purpose.trim(),
+        expectedOutput: form.expectedOutput.trim(),
+        workType: form.workType,
+        dutyShiftCode: form.dutyShiftCode || null,
+        authorityReference: form.authorityReference.trim(),
+        emergencyPostFiling: form.emergencyPostFiling,
+        emergencyJustification: form.emergencyPostFiling ? form.emergencyJustification.trim() : undefined,
+        participants,
+      }),
+    });
+    if (!response.ok) throw new Error(await response.text());
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -606,6 +737,31 @@ export default function OvertimeRequest() {
       });
       return;
     }
+    if (!form.purpose.trim()) {
+      Swal.fire({ icon: "warning", title: "Purpose / justification is required" });
+      return;
+    }
+    if (activeTab === "staff") {
+      setIsSubmitting(true);
+      try {
+        if (timeShifts.length === 0) throw new Error("Configured Time Shift records are unavailable.");
+        await submitStaffRequest();
+        Toast.fire({ icon: "success", title: "Staff Overtime request filed successfully" });
+        setForm(createEmptyForm());
+        setSelectedStaffIds(new Set());
+        setSelectedBusinessUnitId(null);
+        await fetchStaffRecords();
+      } catch (error) {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to file Staff Overtime",
+          text: error instanceof Error ? error.message : "Unable to file Staff Overtime.",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
     if (isCalculatingBreak) {
       Swal.fire({ icon: "info", title: "Please wait for the schedule-based break calculation" });
       return;
@@ -616,10 +772,6 @@ export default function OvertimeRequest() {
         title: "Scheduled break could not be determined",
         text: breakComputation?.message ?? "Please verify that a Work Schedule and Time Shift are assigned for the requested date.",
       });
-      return;
-    }
-    if (!form.purpose.trim()) {
-      Swal.fire({ icon: "warning", title: "Purpose / justification is required" });
       return;
     }
     setIsSubmitting(true);
@@ -685,6 +837,7 @@ export default function OvertimeRequest() {
       authorityReference: r.authorityReference ?? "",
       emergencyPostFiling: r.emergencyPostFiling ?? false,
       emergencyJustification: r.emergencyJustification ?? "",
+      expectedOutput: r.expectedOutput ?? "",
     });
     setTimeSuggestionMessage("Saved inclusive dates and times are shown. They will not be replaced unless you change or reapply the shift suggestion.");
     setActiveTab("apply");
@@ -707,6 +860,31 @@ export default function OvertimeRequest() {
       fetchRecords();
     } catch (err) {
       Swal.fire({ icon: "error", title: "Failed to delete", text: String(err) });
+    }
+  };
+
+  const handleReportDiscrepancy = async (record: OvertimeRequestDTO) => {
+    const result = await Swal.fire({
+      title: "Report Staff Overtime Discrepancy",
+      text: "Describe the incorrect date, time, Business Unit assignment, or inclusion in this request.",
+      input: "textarea",
+      inputValue: record.discrepancyRemarks ?? "",
+      inputPlaceholder: "Describe the discrepancy...",
+      showCancelButton: true,
+      confirmButtonText: "Submit Report",
+      inputValidator: (value) => value.trim() ? undefined : "A description is required.",
+    });
+    if (!result.isConfirmed || !record.overtimeRequestId) return;
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL_HRM}/api/overtime-request/report-discrepancy/${record.overtimeRequestId}`,
+        { method: "PUT", body: JSON.stringify({ remarks: result.value }) },
+      );
+      if (!response.ok) throw new Error(await response.text());
+      Toast.fire({ icon: "success", title: "Discrepancy reported" });
+      await fetchRecords();
+    } catch (error) {
+      void Swal.fire({ icon: "error", title: "Report failed", text: error instanceof Error ? error.message : "Unable to report the discrepancy." });
     }
   };
 
@@ -804,6 +982,18 @@ export default function OvertimeRequest() {
             >
               {editingId !== null ? "Edit Request" : "File Request"}
             </button>
+            {hasSupervisorAssignment && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingId(null);
+                  setActiveTab("staff");
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontWeight: activeTab === "staff" ? 700 : 400, color: activeTab === "staff" ? "#1d4ed8" : "#374151", borderBottom: activeTab === "staff" ? "2px solid #1d4ed8" : "none", paddingBottom: "0.25rem" }}
+              >
+                Staff Overtime
+              </button>
+            )}
           </div>
 
           {activeTab === "table" && (
@@ -846,12 +1036,16 @@ export default function OvertimeRequest() {
                             <th style={th}>Work Type</th>
                             <th style={th}>From</th>
                             <th style={th}>To</th>
-                            <th style={th}>Total Hours</th>
+                            <th style={th}>Authorized Hours</th>
                             <th style={th}>Purpose</th>
+                            <th style={th}>Expected Output</th>
+                            <th style={th}>Authority / Order</th>
+                            <th style={th}>Filed By</th>
                             <th style={th}>Status</th>
                             <th style={th}>Remarks</th>
                             <th style={th}>Recommending Officer</th>
                             <th style={th}>Approved By</th>
+                            <th style={th}>Final Decision Date</th>
                             <th style={th}>Actions</th>
                           </tr>
                         </thead>
@@ -864,9 +1058,14 @@ export default function OvertimeRequest() {
                               <td style={td}>{fmtDateTime(r.dateTimeTo)}</td>
                               <td style={td}>{(r.netAuthorizedHours ?? r.totalHours ?? 0).toFixed(2)} hrs</td>
                               <td style={td}>{r.purpose}</td>
+                              <td style={td}>{r.expectedOutput || "—"}</td>
+                              <td style={td}>{r.authorityReference || "—"}</td>
+                              <td style={td}>{r.supervisorFiled ? (nameMap.get(Number(r.filedByEmployeeId)) ?? "Supervisor / OIC") : "Self"}</td>
                               <td style={td}>
                                 {statusBadge(
-                                  r.status === "Pending" && r.recommendationStatus === "Recommended"
+                                  r.status === "Pending" && r.supervisorFiled
+                                    ? "For Approval — Not Yet Authorized"
+                                    : r.status === "Pending" && r.recommendationStatus === "Recommended"
                                     ? "For Final Approval"
                                     : r.status
                                 )}
@@ -874,7 +1073,17 @@ export default function OvertimeRequest() {
                               <td style={td}>{r.approvalRemarks ?? "—"}</td>
                               <td style={td}>{r.recommendedById ? (nameMap.get(r.recommendedById) ?? "—") : "—"}</td>
                               <td style={td}>{r.approvedById ? (nameMap.get(r.approvedById) ?? "—") : "—"}</td>
+                              <td style={td}>{fmtDateTime(r.approvedAt)}</td>
                               <td style={td}>
+                                {r.supervisorFiled && r.status === "Pending" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleReportDiscrepancy(r)}
+                                    style={{ ...editBtnStyle, background: "#b45309" }}
+                                  >
+                                    {r.discrepancyRemarks ? "Update Discrepancy" : "Report Discrepancy"}
+                                  </button>
+                                )}
                                 {r.status === "Pending" && r.recommendationStatus !== "Recommended" ? (
                                   <>
                                     <button
@@ -916,8 +1125,64 @@ export default function OvertimeRequest() {
             </>
           )}
 
-          {activeTab === "apply" && (
+          {(activeTab === "apply" || activeTab === "staff") && (
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: 520 }}>
+              {activeTab === "staff" && (
+                <>
+                  <div style={{ padding: "0.65rem", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 5, fontSize: "0.82rem", color: "#1e3a8a" }}>
+                    This is one Staff Overtime authority for all selected employees. It will proceed to the next configured Overtime Request approver. Employees can only track it in their portal.
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Business Unit</label>
+                    <select
+                      className={styles.inputField}
+                      value={selectedBusinessUnitId ?? ""}
+                      onChange={(event) => {
+                        setSelectedBusinessUnitId(Number(event.target.value));
+                        setSelectedStaffIds(new Set());
+                      }}
+                      required
+                    >
+                      <option value="">Select authorized Business Unit</option>
+                      {supervisedUnits.map((unit) => (
+                        <option key={unit.businessUnitId} value={unit.businessUnitId}>
+                          {unit.businessUnitName} ({unit.role})
+                        </option>
+                      ))}
+                    </select>
+                    {supervisedUnits.length === 0 && (
+                      <span style={{ color: "#b45309", fontSize: "0.8rem" }}>
+                        You are not the effective Head/OIC for the selected overtime dates, or the dates cross an OIC authority transition.
+                      </span>
+                    )}
+                  </div>
+                  {selectedBusinessUnitId && (
+                    <div className={styles.formGroup}>
+                      <label>Staff Members</label>
+                      <div style={{ maxHeight: 190, overflowY: "auto", border: "1px solid #cbd5e1", borderRadius: 5, padding: "0.5rem" }}>
+                        {(supervisedUnits.find((unit) => unit.businessUnitId === selectedBusinessUnitId)?.personnelEmployeeIds ?? [])
+                          .filter((employeeId) => employeeId !== Number(localStorageUtil.getEmployeeId()))
+                          .map((employeeId) => (
+                            <label key={employeeId} style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem" }}>
+                              <input
+                                type="checkbox"
+                                checked={selectedStaffIds.has(employeeId)}
+                                onChange={(event) => setSelectedStaffIds((current) => {
+                                  const next = new Set(current);
+                                  if (event.target.checked) next.add(employeeId);
+                                  else next.delete(employeeId);
+                                  return next;
+                                })}
+                              />
+                              {nameMap.get(employeeId) ?? `Employee #${employeeId}`}
+                            </label>
+                          ))}
+                      </div>
+                      <span style={{ color: "#64748b", fontSize: "0.8rem" }}>{selectedStaffIds.size} employee(s) selected</span>
+                    </div>
+                  )}
+                </>
+              )}
               <div className={styles.formGroup}>
                 <label>Date Filed</label>
                 <input type="date" value={form.dateFiled} readOnly className={styles.inputField} required style={{ background: "#f3f4f6", cursor: "not-allowed" }} />
@@ -998,7 +1263,7 @@ export default function OvertimeRequest() {
                   )}
                 </div>
               )}
-              {duration && (
+              {duration && activeTab !== "staff" && (
                 <div className={styles.formGroup}>
                   <label>System-computed Overtime Estimate</label>
                   <div style={{ padding: "0.4rem 0.6rem", background: "#f1f5f9", borderRadius: 4, fontSize: "0.9rem" }}>
@@ -1087,15 +1352,37 @@ export default function OvertimeRequest() {
                 <label>Purpose / Justification</label>
                 <textarea value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value })} className={styles.inputField} rows={3} required />
               </div>
+              {activeTab === "staff" && (
+                <div className={styles.formGroup}>
+                  <label>Expected Output</label>
+                  <textarea value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} className={styles.inputField} rows={3} maxLength={500} required />
+                </div>
+              )}
+              {activeTab === "staff" && staffRecords.length > 0 && (
+                <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
+                  <strong style={{ fontSize: "0.85rem" }}>Staff Overtime Filed by Me</strong>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", marginTop: "0.35rem" }}>
+                    <thead><tr style={{ background: "#f1f5f9" }}><th style={th}>Date</th><th style={th}>Staff</th><th style={th}>Purpose</th><th style={th}>Status</th></tr></thead>
+                    <tbody>{staffRecords.map((record) => (
+                      <tr key={record.groupRequestId ?? record.overtimeRequestId} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <td style={td}>{record.dateFiled}</td>
+                        <td style={td}>{record.participantEmployeeIds?.map((id) => nameMap.get(id) ?? `#${id}`).join(", ")}</td>
+                        <td style={td}>{record.purpose}</td>
+                        <td style={td}>{statusBadge(record.status)}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
               <div className={styles.buttonGroup}>
                 <button type="submit" disabled={isSubmitting || isCalculatingBreak} className={styles.submitBtn}>
                   {isCalculatingBreak
                     ? "Calculating Schedule..."
                     : isSubmitting
                       ? "Submitting..."
-                      : (editingId !== null ? "Update Request" : "File Overtime Request")}
+                      : activeTab === "staff" ? "File Staff Overtime" : (editingId !== null ? "Update Request" : "File Overtime Request")}
                 </button>
-                <button type="button" onClick={() => { setForm(createEmptyForm()); setEditingId(null); setActiveTab("table"); }} className={styles.clearBtn}>
+                <button type="button" onClick={() => { setForm(createEmptyForm()); setEditingId(null); setSelectedStaffIds(new Set()); if (activeTab !== "staff") setActiveTab("table"); }} className={styles.clearBtn}>
                   {editingId !== null ? "Cancel Edit" : "Clear"}
                 </button>
               </div>

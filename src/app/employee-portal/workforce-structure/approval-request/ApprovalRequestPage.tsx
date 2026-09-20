@@ -95,8 +95,12 @@ const REQUEST_CONFIGS: Record<string, RequestConfig> = {
     approveUrl: (id) => `${API_HRM}/api/overtime-request/approve/${id}`,
     disapproveUrl: (id) => `${API_HRM}/api/overtime-request/disapprove/${id}`,
     recommendUrl: (id) => `${API_HRM}/api/overtime-request/recommend/${id}`,
-    getSummary: (r) =>
-      `${r.dateTimeFrom ?? ""} – ${r.dateTimeTo ?? ""} | ${r.totalHours ?? 0}h | ${r.purpose ?? ""}`,
+    getSummary: (r) => {
+      const staffCount = Array.isArray(r.participantEmployeeIds) ? `${r.participantEmployeeIds.length} staff | ` : "";
+      const output = r.expectedOutput ? ` | Expected output: ${r.expectedOutput}` : "";
+      const discrepancy = r.groupDiscrepancySummary ? ` | DISCREPANCY: ${r.groupDiscrepancySummary}` : "";
+      return `${staffCount}${r.dateTimeFrom ?? ""} – ${r.dateTimeTo ?? ""} | ${r.totalHours ?? 0}h | ${r.purpose ?? ""}${output}${discrepancy}`;
+    },
   },
   "compensatory overtime credit": {
     label: "Compensatory Overtime Credit",
@@ -577,13 +581,51 @@ export default function ApprovalRequestPage() {
 
       const filtered = data.filter((r) => {
         const empId = Number(r.employeeId);
-        if (!effectiveIds.has(empId)) return false;
+        const supervisorFiled = Boolean(r.supervisorFiled);
+        const requestBusinessUnitId = Number(r.businessUnitId);
+        if (supervisorFiled) {
+          const allowedBusinessUnits = isAllBu
+            ? new Set(myBusinessUnits.map((unit) => unit.id))
+            : new Set([businessUnitId]);
+          if (!allowedBusinessUnits.has(requestBusinessUnitId)) return false;
+        } else if (!effectiveIds.has(empId)) return false;
         // Exclude the logged-in approver's own requests
         if (empId === Number(loggedInId)) return false;
         // Exclude the principal(s) the co-approver is acting on behalf of
         if (isCoApproving && coApprovedForIds.map(Number).includes(empId)) return false;
         // Type-specific record filter (e.g. official business vs official time)
         if (config.recordFilter && !config.recordFilter(r)) return false;
+
+        // Workflow visibility guard:
+        // Show a request only when the logged-in approver (or the principal(s)
+        // represented by a co-approver) belongs to the exact workflow for this
+        // request's routing Business Unit + Employee Request type.
+        // This is generic for every configured employee request type.
+        const requestId = employeeRequestMap.get(selectedType);
+        if (requestId === undefined) return false;
+
+        const routingBusinessUnitId = supervisorFiled
+          ? requestBusinessUnitId
+          : allPersonnel.find(
+              (personnel) =>
+                Number(personnel.employeeId) === empId &&
+                String(personnel.base).toLowerCase() === "yes",
+            )?.businessUnitId;
+
+        if (routingBusinessUnitId === undefined) return false;
+
+        const effectiveApproverIds = isCoApproving
+          ? coApprovedForIds.map(Number)
+          : [Number(loggedInId)];
+
+        const belongsToExactWorkflow = allWorkflowsRaw.some(
+          (workflow) =>
+            workflow.businessUnitId === routingBusinessUnitId &&
+            workflow.employeeRequestId === requestId &&
+            effectiveApproverIds.includes(Number(workflow.employeeId)),
+        );
+
+        if (!belongsToExactWorkflow) return false;
 
         const rowStatus = normalizeStatus(r[config.statusField]);
         if (rowStatus !== selectedStatus.toLowerCase()) return false;
@@ -617,12 +659,19 @@ export default function ApprovalRequestPage() {
         return true;
       });
 
-      const mappedRows: RequestRow[] = filtered.map((r) => ({
+      const uniqueRecords = filtered.filter((record, index, records) => {
+        const groupId = String(record.groupRequestId ?? "");
+        return !groupId || records.findIndex((candidate) => String(candidate.groupRequestId ?? "") === groupId) === index;
+      });
+
+      const mappedRows: RequestRow[] = uniqueRecords.map((r) => ({
         id: r[config.idField] as number,
         employeeId: Number(r.employeeId),
-        employeeName:
-          employeeNameMap.get(Number(r.employeeId)) ??
-          `Employee #${r.employeeId}`,
+        employeeName: Boolean(r.supervisorFiled)
+          ? ((r.participantEmployeeIds as number[] | undefined) ?? [Number(r.employeeId)])
+              .map((id) => employeeNameMap.get(Number(id)) ?? `Employee #${id}`)
+              .join(", ")
+          : (employeeNameMap.get(Number(r.employeeId)) ?? `Employee #${r.employeeId}`),
         dateFiled: String(r[config.dateField] ?? ""),
         status: String(r[config.statusField] ?? ""),
         recommendationStatus: String(r.recommendationStatus ?? ""),
@@ -654,6 +703,10 @@ export default function ApprovalRequestPage() {
     loggedInId,
     isCoApproving,
     coApprovedForIds,
+    myBusinessUnits,
+    employeeRequestMap,
+    allPersonnel,
+    allWorkflowsRaw,
   ]);
 
   // ── Approve / Disapprove ─────────────────────────────────────────────────
@@ -764,10 +817,14 @@ export default function ApprovalRequestPage() {
   const getRowLevel = (row: RequestRow): number | null => {
     if (!isAllBu) return myApprovalLevel;
     // Use the base=Yes entry to find the correct routing BU for this row's employee
+    const supervisorBusinessUnitId = Boolean(row.raw.supervisorFiled)
+      ? Number(row.raw.businessUnitId)
+      : null;
     const p = allPersonnel.find(
       (pp) =>
-        Number(pp.employeeId) === Number(row.employeeId) &&
-        String(pp.base).toLowerCase() === "yes",
+        (supervisorBusinessUnitId !== null
+          ? pp.businessUnitId === supervisorBusinessUnitId
+          : Number(pp.employeeId) === Number(row.employeeId) && String(pp.base).toLowerCase() === "yes"),
     );
     if (!p) return null;
     const reqId = employeeRequestMap.get(row.typeKey);
@@ -851,7 +908,12 @@ export default function ApprovalRequestPage() {
     const level = getRowLevel(row);
     if (level === null) return false;
     // Resolve the BU for this row
-    const p = isAllBu
+    const supervisorBusinessUnitId = Boolean(row.raw.supervisorFiled)
+      ? Number(row.raw.businessUnitId)
+      : null;
+    const p = supervisorBusinessUnitId !== null
+      ? allPersonnel.find((personnel) => personnel.businessUnitId === supervisorBusinessUnitId)
+      : isAllBu
       ? allPersonnel.find(
           (pp) =>
             Number(pp.employeeId) === Number(row.employeeId) &&
