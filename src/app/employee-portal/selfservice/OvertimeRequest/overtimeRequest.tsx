@@ -55,6 +55,7 @@ interface OvertimeRequestDTO {
   breakMinutes?: number;
   recommendedById?: number | null;
   recommendationStatus?: string | null;
+  recommendationRemarks?: string | null;
   approvedById?: number | null;
   approvedAt?: string | null;
   approvalRemarks?: string | null;
@@ -66,6 +67,7 @@ interface OvertimeRequestDTO {
   expectedOutput?: string;
   discrepancyRemarks?: string | null;
   discrepancyReportedAt?: string | null;
+  groupDiscrepancySummary?: string | null;
 }
 
 interface SupervisedUnit {
@@ -257,6 +259,7 @@ export default function OvertimeRequest() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingStaffGroupId, setEditingStaffGroupId] = useState<string | null>(null);
   const [nameMap, setNameMap] = useState<Map<number, string>>(new Map());
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -678,8 +681,11 @@ export default function OvertimeRequest() {
       employeeId,
       breakMinutes: await calculateStaffBreakMinutes(employeeId),
     })));
-    const response = await fetchWithAuth(`${API_BASE_URL_HRM}/api/overtime-request/staff/create`, {
-      method: "POST",
+    const response = await fetchWithAuth(
+      editingStaffGroupId
+        ? `${API_BASE_URL_HRM}/api/overtime-request/staff/${encodeURIComponent(editingStaffGroupId)}`
+        : `${API_BASE_URL_HRM}/api/overtime-request/staff/create`, {
+      method: editingStaffGroupId ? "PUT" : "POST",
       body: JSON.stringify({
         businessUnitId: selectedBusinessUnitId,
         dateFiled: form.dateFiled,
@@ -746,10 +752,16 @@ export default function OvertimeRequest() {
       try {
         if (timeShifts.length === 0) throw new Error("Configured Time Shift records are unavailable.");
         await submitStaffRequest();
-        Toast.fire({ icon: "success", title: "Staff Overtime request filed successfully" });
+        Toast.fire({
+          icon: "success",
+          title: editingStaffGroupId
+            ? "Staff Overtime request updated successfully"
+            : "Staff Overtime request filed successfully",
+        });
         setForm(createEmptyForm());
         setSelectedStaffIds(new Set());
         setSelectedBusinessUnitId(null);
+        setEditingStaffGroupId(null);
         await fetchStaffRecords();
       } catch (error) {
         Swal.fire({
@@ -820,6 +832,19 @@ export default function OvertimeRequest() {
     return <span style={{ color, fontWeight: 600, fontSize: "0.8rem" }}>{status}</span>;
   };
 
+  const getStaffWorkflowStage = (record: OvertimeRequestDTO) => {
+    const finalStatus = (record.status ?? "").trim().toLowerCase();
+    const recommendation = (record.recommendationStatus ?? "").trim().toLowerCase();
+    if (finalStatus === "approved") return "Authorized";
+    if (finalStatus === "disapproved") return "Disapproved";
+    if (finalStatus === "cancelled" || finalStatus === "canceled") return "Cancelled";
+    if (recommendation === "disapproved") return "Disapproved by Level 1";
+    if (recommendation === "recommended" || recommendation === "approved") {
+      return "Awaiting Final Approval";
+    }
+    return "Awaiting Level 1 Recommendation";
+  };
+
   const fmtDateTime = (dt: string | null | undefined) => {
     if (!dt) return "—";
     return dt.replace("T", " ").substring(0, 16);
@@ -860,6 +885,69 @@ export default function OvertimeRequest() {
       fetchRecords();
     } catch (err) {
       Swal.fire({ icon: "error", title: "Failed to delete", text: String(err) });
+    }
+  };
+
+  const isStaffGroupModifiable = (record: OvertimeRequestDTO) => {
+    const recommendation = (record.recommendationStatus ?? "").trim().toLowerCase();
+    const legacyInvalidHeadRecommendation = recommendation === "recommended"
+      && record.recommendedById === record.filedByEmployeeId
+      && record.recommendationRemarks === "Filed by the effective Head/OIC for staff approval.";
+    return record.status.toLowerCase() === "pending"
+      && (recommendation === "" || recommendation === "pending"
+        || recommendation === "not recommended" || legacyInvalidHeadRecommendation);
+  };
+
+  const handleStaffEdit = (record: OvertimeRequestDTO) => {
+    if (!record.groupRequestId || !isStaffGroupModifiable(record)) return;
+    setEditingStaffGroupId(record.groupRequestId);
+    setSelectedBusinessUnitId(record.businessUnitId ?? null);
+    setSelectedStaffIds(new Set(record.participantEmployeeIds ?? []));
+    setForm({
+      dateFiled: record.dateFiled,
+      dateTimeFrom: (record.dateTimeFrom ?? "").replace(" ", "T").substring(0, 16),
+      dateTimeTo: (record.dateTimeTo ?? "").replace(" ", "T").substring(0, 16),
+      purpose: record.purpose,
+      workType: record.workType ?? "",
+      dutyShiftCode: record.dutyShiftCode ?? "",
+      authorityReference: record.authorityReference ?? "",
+      emergencyPostFiling: record.emergencyPostFiling ?? false,
+      emergencyJustification: record.emergencyJustification ?? "",
+      expectedOutput: record.expectedOutput ?? "",
+    });
+    setActiveTab("staff");
+  };
+
+  const handleStaffDelete = async (record: OvertimeRequestDTO) => {
+    if (!record.groupRequestId || !isStaffGroupModifiable(record)) return;
+    const result = await Swal.fire({
+      title: "Delete this Staff Overtime request?",
+      text: "The complete request and every staff participant row will be deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      confirmButtonText: "Yes, delete group",
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const response = await fetchWithAuth(
+        `${API_BASE_URL_HRM}/api/overtime-request/staff/${encodeURIComponent(record.groupRequestId)}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) throw new Error(await response.text());
+      Toast.fire({ icon: "success", title: "Staff Overtime request deleted" });
+      if (editingStaffGroupId === record.groupRequestId) {
+        setEditingStaffGroupId(null);
+        setForm(createEmptyForm());
+        setSelectedStaffIds(new Set());
+      }
+      await fetchStaffRecords();
+    } catch (error) {
+      void Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: error instanceof Error ? error.message : "Unable to delete the Staff Overtime request.",
+      });
     }
   };
 
@@ -987,6 +1075,7 @@ export default function OvertimeRequest() {
                 type="button"
                 onClick={() => {
                   setEditingId(null);
+                  setEditingStaffGroupId(null);
                   setActiveTab("staff");
                 }}
                 style={{ background: "none", border: "none", cursor: "pointer", fontWeight: activeTab === "staff" ? 700 : 400, color: activeTab === "staff" ? "#1d4ed8" : "#374151", borderBottom: activeTab === "staff" ? "2px solid #1d4ed8" : "none", paddingBottom: "0.25rem" }}
@@ -1063,7 +1152,9 @@ export default function OvertimeRequest() {
                               <td style={td}>{r.supervisorFiled ? (nameMap.get(Number(r.filedByEmployeeId)) ?? "Supervisor / OIC") : "Self"}</td>
                               <td style={td}>
                                 {statusBadge(
-                                  r.status === "Pending" && r.supervisorFiled
+                                  r.status === "Pending" && r.supervisorFiled && r.recommendationStatus === "Disapproved"
+                                    ? "Disapproved by Recommending Officer"
+                                    : r.status === "Pending" && r.supervisorFiled
                                     ? "For Approval — Not Yet Authorized"
                                     : r.status === "Pending" && r.recommendationStatus === "Recommended"
                                     ? "For Final Approval"
@@ -1084,7 +1175,7 @@ export default function OvertimeRequest() {
                                     {r.discrepancyRemarks ? "Update Discrepancy" : "Report Discrepancy"}
                                   </button>
                                 )}
-                                {r.status === "Pending" && r.recommendationStatus !== "Recommended" ? (
+                                {!r.supervisorFiled && r.status === "Pending" && r.recommendationStatus !== "Recommended" ? (
                                   <>
                                     <button
                                       type="button"
@@ -1126,6 +1217,7 @@ export default function OvertimeRequest() {
           )}
 
           {(activeTab === "apply" || activeTab === "staff") && (
+            <>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "0.75rem", maxWidth: 520 }}>
               {activeTab === "staff" && (
                 <>
@@ -1358,35 +1450,76 @@ export default function OvertimeRequest() {
                   <textarea value={form.expectedOutput} onChange={(e) => setForm({ ...form, expectedOutput: e.target.value })} className={styles.inputField} rows={3} maxLength={500} required />
                 </div>
               )}
-              {activeTab === "staff" && staffRecords.length > 0 && (
-                <div style={{ overflowX: "auto", marginTop: "0.5rem" }}>
-                  <strong style={{ fontSize: "0.85rem" }}>Staff Overtime Filed by Me</strong>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", marginTop: "0.35rem" }}>
-                    <thead><tr style={{ background: "#f1f5f9" }}><th style={th}>Date</th><th style={th}>Staff</th><th style={th}>Purpose</th><th style={th}>Status</th></tr></thead>
-                    <tbody>{staffRecords.map((record) => (
-                      <tr key={record.groupRequestId ?? record.overtimeRequestId} style={{ borderBottom: "1px solid #e2e8f0" }}>
-                        <td style={td}>{record.dateFiled}</td>
-                        <td style={td}>{record.participantEmployeeIds?.map((id) => nameMap.get(id) ?? `#${id}`).join(", ")}</td>
-                        <td style={td}>{record.purpose}</td>
-                        <td style={td}>{statusBadge(record.status)}</td>
-                      </tr>
-                    ))}</tbody>
-                  </table>
-                </div>
-              )}
               <div className={styles.buttonGroup}>
                 <button type="submit" disabled={isSubmitting || isCalculatingBreak} className={styles.submitBtn}>
                   {isCalculatingBreak
                     ? "Calculating Schedule..."
                     : isSubmitting
                       ? "Submitting..."
-                      : activeTab === "staff" ? "File Staff Overtime" : (editingId !== null ? "Update Request" : "File Overtime Request")}
+                      : activeTab === "staff"
+                        ? (editingStaffGroupId ? "Update Staff Overtime" : "File Staff Overtime")
+                        : (editingId !== null ? "Update Request" : "File Overtime Request")}
                 </button>
-                <button type="button" onClick={() => { setForm(createEmptyForm()); setEditingId(null); setSelectedStaffIds(new Set()); if (activeTab !== "staff") setActiveTab("table"); }} className={styles.clearBtn}>
-                  {editingId !== null ? "Cancel Edit" : "Clear"}
+                <button type="button" onClick={() => { setForm(createEmptyForm()); setEditingId(null); setEditingStaffGroupId(null); setSelectedStaffIds(new Set()); if (activeTab !== "staff") setActiveTab("table"); }} className={styles.clearBtn}>
+                  {editingId !== null || editingStaffGroupId !== null ? "Cancel Edit" : "Clear"}
                 </button>
               </div>
             </form>
+            {activeTab === "staff" && staffRecords.length > 0 && (
+              <section style={{ marginTop: "1.5rem", width: "100%" }}>
+                <strong style={{ display: "block", fontSize: "1rem", marginBottom: "0.6rem" }}>
+                  Staff Overtime Filed by Me
+                </strong>
+                <div style={{ overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: 7 }}>
+                  <table style={{ width: "100%", minWidth: 1100, borderCollapse: "collapse", fontSize: "0.85rem" }}>
+                    <thead>
+                      <tr style={{ background: "#f1f5f9" }}>
+                        <th style={th}>Date Filed</th>
+                        <th style={th}>Coverage</th>
+                        <th style={th}>Staff</th>
+                        <th style={th}>Purpose / Expected Output</th>
+                        <th style={th}>Status</th>
+                        <th style={th}>Discrepancy</th>
+                        <th style={th}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>{staffRecords.map((record) => (
+                      <tr key={record.groupRequestId ?? record.overtimeRequestId} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                        <td style={td}>{record.dateFiled}</td>
+                        <td style={td}>{fmtDateTime(record.dateTimeFrom)} – {fmtDateTime(record.dateTimeTo)}</td>
+                        <td style={td}>{record.participantEmployeeIds?.map((id) => nameMap.get(id) ?? `#${id}`).join(", ")}</td>
+                        <td style={td}>
+                          <strong>{record.purpose}</strong>
+                          {record.expectedOutput?.trim()
+                            && record.expectedOutput.trim().toLowerCase() !== record.purpose.trim().toLowerCase() && (
+                            <span style={{ display: "block", color: "#64748b", marginTop: 3 }}>
+                              Expected output: {record.expectedOutput}
+                            </span>
+                          )}
+                        </td>
+                        <td style={td}>
+                          {statusBadge(getStaffWorkflowStage(record))}
+                        </td>
+                        <td style={{ ...td, color: record.groupDiscrepancySummary ? "#b45309" : "#64748b" }}>
+                          {record.groupDiscrepancySummary || "—"}
+                        </td>
+                        <td style={td}>
+                          {isStaffGroupModifiable(record) ? (
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button type="button" onClick={() => handleStaffEdit(record)} style={editBtnStyle}>Edit</button>
+                              <button type="button" onClick={() => void handleStaffDelete(record)} style={deleteBtnStyle}>Delete</button>
+                            </div>
+                          ) : (
+                            <span style={{ color: "#64748b", fontSize: "0.78rem" }}>No longer editable</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+            </>
           )}
         </div>
       </div>

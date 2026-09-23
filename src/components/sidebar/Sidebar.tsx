@@ -14,6 +14,12 @@ import { MdAccessTime, MdOutlineMiscellaneousServices } from "react-icons/md";
 import { HiViewGrid, HiOfficeBuilding } from "react-icons/hi";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { localStorageUtil, type PortalModuleAccess } from "@/lib/utils/localStorageUtil";
+import {
+  canAccessPortalFeature,
+  loadPortalPermissions,
+  NO_PORTAL_MODULE_ACCESS,
+  type PortalPermissions,
+} from "@/lib/utils/portalPermissions";
 
 
 type PortalModuleKey = keyof PortalModuleAccess;
@@ -26,48 +32,6 @@ type SidebarMenuItem = Pick<
   id: number;
   portalModule?: PortalModuleKey;
   ssoTarget?: SsoTarget;
-};
-
-type PermissionRuleset = {
-  permissionId: number;
-  permissionName: string;
-  isAdministrator: boolean;
-  portalModuleAccess?: string | PortalModuleAccess | null;
-};
-
-const NO_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
-  administrative: false,
-  hrManagement: false,
-  timeKeeping: false,
-  payroll: false,
-  primeHr: false,
-};
-
-const ALL_PORTAL_MODULE_ACCESS: PortalModuleAccess = {
-  administrative: true,
-  hrManagement: true,
-  timeKeeping: true,
-  payroll: true,
-  primeHr: true,
-};
-
-const parsePortalModuleAccess = (
-  value: PermissionRuleset["portalModuleAccess"]
-): PortalModuleAccess => {
-  try {
-    const parsed = typeof value === "string" ? JSON.parse(value) : value;
-    if (!parsed || typeof parsed !== "object") return { ...NO_PORTAL_MODULE_ACCESS };
-    const access = parsed as Partial<PortalModuleAccess>;
-    return {
-      administrative: access.administrative === true,
-      hrManagement: access.hrManagement === true,
-      timeKeeping: access.timeKeeping === true,
-      payroll: access.payroll === true,
-      primeHr: access.primeHr === true,
-    };
-  } catch {
-    return { ...NO_PORTAL_MODULE_ACCESS };
-  }
 };
 
 const menuItems: SidebarMenuItem[] = [
@@ -123,30 +87,37 @@ const essItems = [
   {
     label: "Leave Application",
     path: "/employee-portal/selfservice/LeaveApplication",
+    permissionKey: "ep.leaveApp",
   },
   {
     label: "Overtime Request",
     path: "/employee-portal/selfservice/OvertimeRequest",
+    permissionKey: "ep.overtimeReq",
   },
   {
     label: "Compensatory Overtime Credit",
     path: "/employee-portal/selfservice/Compensatory-Overtime-Credits",
+    permissionKey: "ep.coc",
   },
   {
     label: "Compensatory Time Off",
     path: "/employee-portal/selfservice/CompensatoryTimeOff",
+    permissionKey: "ep.cto",
   },
   {
     label: "Official Engagement",
     path: "/employee-portal/selfservice/OfficialEngagement",
+    permissionKey: "ep.officialEngag",
   },
   {
     label: "Pass Slip",
     path: "/employee-portal/selfservice/PassSlip",
+    permissionKey: "ep.passSlip",
   },
   {
     label: "Time Correction",
     path: "/employee-portal/selfservice/TimeCorrection",
+    permissionKey: "ep.timeCorrection",
   },
 ];
 
@@ -160,6 +131,7 @@ export default function Sidebar() {
   const [isApprover, setIsApprover] = useState(false);
   const [isInWorkflow, setIsInWorkflow] = useState(false);
   const [portalModuleAccess, setPortalModuleAccess] = useState<PortalModuleAccess>({ ...NO_PORTAL_MODULE_ACCESS });
+  const [permissions, setPermissions] = useState<PortalPermissions | null>(null);
   const [launchingTarget, setLaunchingTarget] = useState<SsoTarget | null>(null);
 
   const launchSso = async (
@@ -224,67 +196,36 @@ useEffect(() => {
   setOpenWSM(isWSMRoute);
 }, [isWSMRoute]);
 
-  // Resolve the current permission ruleset and map its top-level Portal flags.
-  // Cached flags avoid unnecessary menu flicker, while the backend remains the
-  // source of truth and refreshes the cache whenever the sidebar mounts.
+  // Resolve permissions from the authenticated backend identity. Start denied
+  // so a missing/invalid role cannot inherit browser-cached access.
   useEffect(() => {
     let cancelled = false;
-    const employeeNo = localStorageUtil.getEmployeeNo()?.trim().toLowerCase();
-    const storedRole = localStorageUtil.getEmployeeRole()?.trim();
-
-    // The installation account is the system super administrator. Its access
-    // must never depend on a permission-ruleset row or cached Portal flags.
-    if (employeeNo === "admin") {
-      setPortalModuleAccess({ ...ALL_PORTAL_MODULE_ACCESS });
-      if (storedRole) {
-        localStorageUtil.setPortalModuleAccess(ALL_PORTAL_MODULE_ACCESS, storedRole);
-      } else {
-        localStorageUtil.clearPortalModuleAccess();
-      }
-      return () => { cancelled = true; };
-    }
-
-    if (!storedRole) {
-      localStorageUtil.clearPortalModuleAccess();
-      setPortalModuleAccess({ ...NO_PORTAL_MODULE_ACCESS });
-      return () => { cancelled = true; };
-    }
-
-    const cached = localStorageUtil.getPortalModuleAccess(storedRole);
-    if (cached) setPortalModuleAccess(cached);
-
-    const loadPortalModuleAccess = async () => {
-      try {
-        const response = await fetchWithAuth(`${runtimeConfig.getApiUrl("administrative")}/api/permission/get-all`);
-        if (!response.ok) throw new Error(`Unable to load permissions (${response.status})`);
-
-        const rulesets = await response.json() as PermissionRuleset[];
-        const normalizedRole = storedRole.replace(/^ROLE_/i, "").toUpperCase();
-        const ruleset = rulesets.find((item) =>
-          String(item.permissionId) === storedRole ||
-          item.permissionName?.trim().toUpperCase() === normalizedRole
-        );
-
-        if (!ruleset) throw new Error("The current permission ruleset was not found");
-
-        const access = ruleset.isAdministrator
-          ? { ...ALL_PORTAL_MODULE_ACCESS }
-          : parsePortalModuleAccess(ruleset.portalModuleAccess);
-
+    const refreshPermissions = (forceRefresh = false) => {
+      void loadPortalPermissions(forceRefresh).then((resolved) => {
         if (cancelled) return;
-        setPortalModuleAccess(access);
-        localStorageUtil.setPortalModuleAccess(access, storedRole);
-      } catch (error) {
-        console.error("Unable to refresh Portal module permissions", error);
-        if (!cancelled && !cached) {
-          setPortalModuleAccess({ ...NO_PORTAL_MODULE_ACCESS });
-        }
-      }
+        setPermissions(resolved);
+        setPortalModuleAccess(resolved.portalModuleAccess);
+        window.dispatchEvent(new CustomEvent("portal-permissions-refreshed"));
+      });
+    };
+    const handleFocus = () => refreshPermissions(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refreshPermissions(true);
     };
 
-    void loadPortalModuleAccess();
-    return () => { cancelled = true; };
+    refreshPermissions();
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
+
+  const visibleEssItems = permissions
+    ? essItems.filter((item) => canAccessPortalFeature(permissions, item.permissionKey))
+    : [];
 
   // Fetch employee info for the sidebar card
   useEffect(() => {
@@ -409,7 +350,7 @@ useEffect(() => {
           ))}
 
         {/* Employee Self Service */}
-        <div
+        {visibleEssItems.length > 0 && <div
           className={`${styles.menuItem} ${
             openESS ? styles.activeMenuItem : ""
           }`}
@@ -421,7 +362,7 @@ useEffect(() => {
 
           {openESS && (
             <div className={styles.dropdownMenu}>
-              {essItems.map((item) => (
+              {visibleEssItems.map((item) => (
                 <Link
                   key={item.path}
                   href={item.path}
@@ -437,10 +378,10 @@ useEffect(() => {
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Workforce Structure Management */}
-        {isApprover && (
+        {permissions?.hasAssignedRole && isApprover && (
           <div
             className={`${styles.menuItem} ${
               openWSM ? styles.activeMenuItem : ""

@@ -9,10 +9,15 @@ import {
   Clock,
   Megaphone,
   Timer,
+  TriangleAlert,
 } from "lucide-react";
 import styles from "@/styles/DashboardPage.module.scss";
 import { localStorageUtil } from "@/lib/utils/localStorageUtil";
 import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
+import {
+  EmployeeSetupWarning,
+  getEmployeeSetupWarnings,
+} from "@/lib/utils/employeeSetupWarnings";
 
 const API_BASE_URL_HRM = runtimeConfig.getApiUrl("hrm");
 const API_BASE_URL_ADMINISTRATIVE = runtimeConfig.getApiUrl("administrative");
@@ -45,6 +50,7 @@ export default function Dashboard() {
   const [announcements, setAnnouncements] = useState<AnnouncementDTO[]>([]);
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<AnnouncementDTO | null>(null);
+  const [setupWarnings, setSetupWarnings] = useState<EmployeeSetupWarning[]>([]);
 
   useEffect(() => {
     const empId = localStorageUtil.getEmployeeId();
@@ -61,6 +67,16 @@ export default function Dashboard() {
       .then((data) => setLeaveBalance(data ?? null))
       .catch(() => setLeaveBalance(null))
       .finally(() => setIsBalanceLoading(false));
+
+    const refreshWarnings = (forceRefresh = false) => {
+      getEmployeeSetupWarnings(empId, forceRefresh).then(setSetupWarnings);
+    };
+    const handlePermissionsRefreshed = () => refreshWarnings(true);
+    refreshWarnings();
+    window.addEventListener("portal-permissions-refreshed", handlePermissionsRefreshed);
+    return () => {
+      window.removeEventListener("portal-permissions-refreshed", handlePermissionsRefreshed);
+    };
   }, []);
 
   useEffect(() => {
@@ -134,6 +150,23 @@ export default function Dashboard() {
 
       <div className={styles.divider}></div>
       <p className={styles.subtitle}>Here’s your quick overview for today.</p>
+
+      {setupWarnings.length > 0 && (
+        <section className={styles.setupWarningBanner} aria-label="Employee setup notifications">
+          <div className={styles.setupWarningHeading}>
+            <TriangleAlert size={20} aria-hidden="true" />
+            <h3>Employee Setup Required</h3>
+          </div>
+          <div className={styles.setupWarningList}>
+            {setupWarnings.map((warning) => (
+              <div key={warning.id} className={styles.setupWarningMessage}>
+                <strong>{warning.title}</strong>
+                <span>{warning.message}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Summary Cards */}
       <div className={styles.summaryContainer}>

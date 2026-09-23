@@ -664,21 +664,46 @@ export default function ApprovalRequestPage() {
         return !groupId || records.findIndex((candidate) => String(candidate.groupRequestId ?? "") === groupId) === index;
       });
 
-      const mappedRows: RequestRow[] = uniqueRecords.map((r) => ({
-        id: r[config.idField] as number,
-        employeeId: Number(r.employeeId),
-        employeeName: Boolean(r.supervisorFiled)
-          ? ((r.participantEmployeeIds as number[] | undefined) ?? [Number(r.employeeId)])
-              .map((id) => employeeNameMap.get(Number(id)) ?? `Employee #${id}`)
-              .join(", ")
-          : (employeeNameMap.get(Number(r.employeeId)) ?? `Employee #${r.employeeId}`),
-        dateFiled: String(r[config.dateField] ?? ""),
-        status: String(r[config.statusField] ?? ""),
-        recommendationStatus: String(r.recommendationStatus ?? ""),
-        summary: config.getSummary(r),
-        typeKey: selectedType,
-        raw: r,
-      }));
+      const mappedRows: RequestRow[] = uniqueRecords.map((r) => {
+        let recommendationStatus = String(r.recommendationStatus ?? "");
+        const requestId = employeeRequestMap.get(selectedType);
+        const requestBusinessUnitId = Number(r.businessUnitId);
+        const legacyHeadAutoRecommendation = Boolean(r.supervisorFiled)
+          && normalizeStatus(recommendationStatus) === "recommended"
+          && String(r.recommendedById ?? "") === String(r.filedByEmployeeId ?? "")
+          && String(r.recommendationRemarks ?? "") === "Filed by the effective Head/OIC for staff approval.";
+        if (legacyHeadAutoRecommendation && requestId !== undefined) {
+          const route = allWorkflowsRaw.filter((workflow) =>
+            workflow.businessUnitId === requestBusinessUnitId
+              && workflow.employeeRequestId === requestId,
+          );
+          const firstLevel = route.reduce(
+            (minimum, workflow) => Math.min(minimum, workflow.approvalLevel),
+            Number.POSITIVE_INFINITY,
+          );
+          const filerIsConfiguredLevelOne = route.some((workflow) =>
+            workflow.approvalLevel === firstLevel
+              && String(workflow.employeeId) === String(r.filedByEmployeeId),
+          );
+          if (!filerIsConfiguredLevelOne) recommendationStatus = "Pending";
+        }
+
+        return {
+          id: r[config.idField] as number,
+          employeeId: Number(r.employeeId),
+          employeeName: Boolean(r.supervisorFiled)
+            ? ((r.participantEmployeeIds as number[] | undefined) ?? [Number(r.employeeId)])
+                .map((id) => employeeNameMap.get(Number(id)) ?? `Employee #${id}`)
+                .join(", ")
+            : (employeeNameMap.get(Number(r.employeeId)) ?? `Employee #${r.employeeId}`),
+          dateFiled: String(r[config.dateField] ?? ""),
+          status: String(r[config.statusField] ?? ""),
+          recommendationStatus,
+          summary: config.getSummary(r),
+          typeKey: selectedType,
+          raw: r,
+        };
+      });
 
       setRows(mappedRows);
     } catch {

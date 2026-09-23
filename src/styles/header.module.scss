@@ -156,6 +156,36 @@
   position: relative;
 }
 
+.notificationButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--header-bg);
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 13px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
 /* 🧾 DROPDOWN PANEL */
 .panel {
   position: absolute;
@@ -181,6 +211,45 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   margin-bottom: 8px;
   color: var(--header-text-color);
+}
+
+.setupWarnings {
+  margin: 8px 0 12px;
+  padding: 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.setupWarningsTitle {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.setupWarningItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  line-height: 1.4;
+
+  & + & {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid #fde68a;
+  }
+}
+
+:global([data-theme="dark"]) .setupWarnings {
+  border-color: #d97706;
+  background: #451a03;
+  color: #fde68a;
+}
+
+:global([data-theme="dark"]) .setupWarningItem + .setupWarningItem {
+  border-top-color: #92400e;
 }
 
 /* 📄 CATEGORY ROWS */

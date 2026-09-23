@@ -14,6 +14,8 @@ import { fetchWithAuth } from "@/lib/utils/fetchWithAuth";
 import { Employee } from "@/lib/types/Employee";
 import { AUTH_CONFIG } from "@/lib/utils/authConfig";
 import { setCookie } from "@/lib/utils/cookies";
+import { clearPortalPermissions } from "@/lib/utils/portalPermissions";
+import { clearEmployeeSetupWarnings } from "@/lib/utils/employeeSetupWarnings";
 
 const { INACTIVITY_LIMIT } = AUTH_CONFIG;
 
@@ -31,6 +33,12 @@ export default function LoginPage() {
     try {
       const employeeNo = formData.get("employeeNo") as string;
       const employeePassword = formData.get("employeePassword") as string;
+
+      clearPortalPermissions();
+      clearEmployeeSetupWarnings();
+      localStorageUtil.clearEmployeeInfo();
+      localStorageUtil.clearEmployees();
+      localStorageUtil.setEmployeeRole(null);
 
       // Login
       const response = await fetch(`${API_BASE_URL}/api/employee/login`, {
@@ -75,13 +83,17 @@ export default function LoginPage() {
       localStorageUtil.setEmployees(filtered); // Store employees list
 
       // Identify current employee (use unfiltered list so admin can also get their role set)
-      const currentEmp = employees.find((emp) => emp.employeeNo === employeeNo);
+      const currentEmp = employees.find(
+        (emp) => emp.employeeNo.trim().toLowerCase() === employeeNo.trim().toLowerCase(),
+      );
       if (currentEmp) {
         localStorageUtil.setEmployeeId(currentEmp.employeeId);
         localStorageUtil.setEmployeeNo(currentEmp.employeeNo);
         localStorageUtil.setEmployeeFullname(currentEmp.fullName);
         localStorageUtil.setEmployeeRole(currentEmp.role);
         localStorageUtil.setBiometricNo(currentEmp.biometricNo);
+      } else {
+        throw new Error("The signed-in employee record could not be loaded");
       }
 
       // Fetch and store system configuration from backend

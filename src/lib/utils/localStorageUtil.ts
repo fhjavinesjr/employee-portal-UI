@@ -49,12 +49,25 @@ export const localStorageUtil = {
   clearEmployeeInfo: () => {
     localStorage.removeItem("employeeNo");
     localStorage.removeItem("employeeFullname");
+    localStorage.removeItem("employeeId");
+    localStorage.removeItem("biometricNo");
+    localStorage.removeItem("userRole");
     localStorage.removeItem("portalModuleAccess");
     localStorage.removeItem("portalModuleAccessRole");
   },
 
-  setEmployeeRole: (userRole: string) => localStorage.setItem("userRole", userRole),
-  getEmployeeRole: () => localStorage.getItem("userRole"),
+  setEmployeeRole: (userRole: string | null | undefined) => {
+    const normalized = userRole?.trim();
+    if (!normalized || normalized.toLowerCase() === "null" || normalized.toLowerCase() === "undefined") {
+      localStorage.removeItem("userRole");
+      return;
+    }
+    localStorage.setItem("userRole", normalized);
+  },
+  getEmployeeRole: () => {
+    const role = localStorage.getItem("userRole")?.trim();
+    return !role || role.toLowerCase() === "null" || role.toLowerCase() === "undefined" ? null : role;
+  },
 
   setPortalModuleAccess: (access: PortalModuleAccess, role: string) => {
     localStorage.setItem("portalModuleAccess", JSON.stringify(access));

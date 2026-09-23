@@ -36,6 +36,47 @@
   color: #ffffff; 
 }
 
+.setupWarningBanner {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.setupWarningHeading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+}
+
+.setupWarningList {
+  display: grid;
+  gap: 10px;
+}
+
+.setupWarningMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+[data-theme="dark"] .setupWarningBanner {
+  border-color: #d97706;
+  background: #451a03;
+  color: #fde68a;
+}
+
 /* ------------------ SUMMARY CARDS ------------------ */
 .summaryContainer {
   display: grid;
