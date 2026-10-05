@@ -52,15 +52,17 @@ const performAuthenticatedFetch = (
   url: string,
   options: RequestInit,
   token: string | null | undefined
-): Promise<Response> =>
-  fetch(url, {
+): Promise<Response> => {
+  const headers = new Headers(options.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  return fetch(url, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers,
   });
+};
 
 export const fetchWithAuth = async (
   url: string,

@@ -7,6 +7,10 @@ export type PermissionEntry = {
   canAdd?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  canSubmit?: boolean;
+  canApprove?: boolean;
+  canFinalize?: boolean;
+  dataScope?: "NONE" | "OWN_RECORDS" | "ASSIGNED_RECORDS" | "AGENCY_WIDE";
 };
 
 type PermissionRuleset = {

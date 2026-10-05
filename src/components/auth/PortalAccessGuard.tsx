@@ -27,6 +27,9 @@ const FEATURE_ROUTES: Array<[string, string]> = [
   ["/employee-portal/selfservice/OfficialEngagement", "ep.officialEngag"],
   ["/employee-portal/selfservice/PassSlip", "ep.passSlip"],
   ["/employee-portal/selfservice/TimeCorrection", "ep.timeCorrection"],
+  ["/employee-portal/selfservice/SALN", "ep.saln"],
+  ["/employee-portal/selfservice/MyPerformanceCommitments", "primehr.individual-performance-commitment"],
+  ["/employee-portal/selfservice/MyPerformanceMonitoring", "primehr.performance-monitoring"],
 ];
 
 export default function PortalAccessGuard({ children }: { children: React.ReactNode }) {

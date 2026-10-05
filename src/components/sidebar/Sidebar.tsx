@@ -119,6 +119,21 @@ const essItems = [
     path: "/employee-portal/selfservice/TimeCorrection",
     permissionKey: "ep.timeCorrection",
   },
+  {
+    label: "SALN",
+    path: "/employee-portal/selfservice/SALN",
+    permissionKey: "ep.saln",
+  },
+  {
+    label: "My Performance Commitments",
+    path: "/employee-portal/selfservice/MyPerformanceCommitments",
+    permissionKey: "primehr.individual-performance-commitment",
+  },
+  {
+    label: "My Performance Monitoring",
+    path: "/employee-portal/selfservice/MyPerformanceMonitoring",
+    permissionKey: "primehr.performance-monitoring",
+  },
 ];
 
 export default function Sidebar() {
