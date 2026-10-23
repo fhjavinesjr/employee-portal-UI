@@ -134,6 +134,11 @@ const essItems = [
     path: "/employee-portal/selfservice/MyPerformanceMonitoring",
     permissionKey: "primehr.performance-monitoring",
   },
+  {
+    label: "My Performance Ratings",
+    path: "/employee-portal/selfservice/MyPerformanceRatings",
+    permissionKey: "primehr.performance-rating",
+  },
 ];
 
 export default function Sidebar() {
@@ -239,7 +244,10 @@ useEffect(() => {
   }, []);
 
   const visibleEssItems = permissions
-    ? essItems.filter((item) => canAccessPortalFeature(permissions, item.permissionKey))
+    ? essItems.filter((item) => item.path.endsWith("/MyPerformanceRatings")
+      ? ["primehr.performance-rating", "primehr.performance-appeal", "primehr.performance-intervention"]
+          .some((key) => canAccessPortalFeature(permissions, key))
+      : canAccessPortalFeature(permissions, item.permissionKey))
     : [];
 
   // Fetch employee info for the sidebar card

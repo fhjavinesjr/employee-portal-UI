@@ -30,6 +30,7 @@ const FEATURE_ROUTES: Array<[string, string]> = [
   ["/employee-portal/selfservice/SALN", "ep.saln"],
   ["/employee-portal/selfservice/MyPerformanceCommitments", "primehr.individual-performance-commitment"],
   ["/employee-portal/selfservice/MyPerformanceMonitoring", "primehr.performance-monitoring"],
+  ["/employee-portal/selfservice/MyPerformanceRatings", "primehr.performance-rating"],
 ];
 
 export default function PortalAccessGuard({ children }: { children: React.ReactNode }) {
@@ -53,7 +54,10 @@ export default function PortalAccessGuard({ children }: { children: React.ReactN
     const permissions = await loadPortalPermissions(true);
     const feature = FEATURE_ROUTES.find(([route]) => pathname.startsWith(route));
     const routeAllowed = feature
-      ? canAccessPortalFeature(permissions, feature[1])
+      ? feature[0].endsWith("/MyPerformanceRatings")
+        ? ["primehr.performance-rating", "primehr.performance-appeal", "primehr.performance-intervention"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+        : canAccessPortalFeature(permissions, feature[1])
       : pathname.startsWith("/employee-portal/workforce-structure/")
         ? permissions.hasAssignedRole
         : permissions.hasAssignedRole;
