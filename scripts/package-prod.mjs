@@ -66,6 +66,23 @@ if (fs.existsSync(distDir)) {
 fs.mkdirSync(distDir, { recursive: true });
 fs.cpSync(standaloneDir, distDir, { recursive: true, dereference: true });
 
+// Next's standalone output tracing includes Sharp's native addon but can omit
+// the sibling runtime libraries (for example, libvips DLLs on Windows). Overlay
+// the Sharp platform packages installed for the build host so the packaged
+// server can actually load the addon at runtime.
+const installedImagePackages = path.join(root, "node_modules", "@img");
+const packagedImagePackages = path.join(distDir, "node_modules", "@img");
+if (fs.existsSync(installedImagePackages)) {
+  for (const packageName of fs.readdirSync(installedImagePackages)) {
+    if (!packageName.startsWith("sharp-")) continue;
+    fs.cpSync(
+      path.join(installedImagePackages, packageName),
+      path.join(packagedImagePackages, packageName),
+      { recursive: true, dereference: true }
+    );
+  }
+}
+
 if (fs.existsSync(publicDir)) {
   fs.cpSync(publicDir, path.join(distDir, "public"), { recursive: true });
 }
