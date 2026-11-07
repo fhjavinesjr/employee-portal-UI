@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const profileImage =
     (profile.employeePicture
       ? `data:image/jpeg;base64,${profile.employeePicture}`
-      : "/default-avatar.jpg");
+      : "/accounts.png");
 
   return (
     <div id="Profile" className={modalStyles.Modal}>

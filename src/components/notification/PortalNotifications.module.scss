@@ -1,0 +1,29 @@
+.wrapper { position: relative; }
+.bell { position: relative; border: 0; background: transparent; color: inherit; cursor: pointer; padding: 5px; font-size: 20px; }
+.badge { position: absolute; top: -5px; right: -7px; min-width: 18px; height: 18px; padding: 1px 4px; border-radius: 999px; background: #dc2626; color: white; font-size: 10px; font-weight: 800; }
+.panel { position: absolute; z-index: 2100; top: 40px; right: 0; width: min(420px, calc(100vw - 28px)); max-height: 540px; overflow: auto; padding: 14px; border-radius: 10px; background: var(--card-bg, white); color: var(--header-text-color, #17243a); box-shadow: 0 12px 30px rgba(15,23,42,.22); }
+.page { padding: 24px; max-width: 1080px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.header h1, .header h2 { margin: 0; }
+.actions, .filters, .itemActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions button, .filters button, .open, .dismiss { border: 0; border-radius: 6px; padding: 8px 11px; cursor: pointer; background: #1d4ed8; color: white; }
+.filters { margin: 14px 0; }
+.filters .selected { background: #17243a; }
+.signals { margin: 12px 0; padding: 11px; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #78350f; }
+.signal { display: grid; gap: 3px; margin-top: 8px; }
+.signal button { width: fit-content; border: 0; padding: 0; background: transparent; color: #1d4ed8; cursor: pointer; text-align: left; }
+.list { display: grid; gap: 9px; margin-top: 12px; }
+.item { border: 1px solid #dbe3ef; border-left: 4px solid #64748b; border-radius: 8px; padding: 11px; background: var(--card-bg, white); }
+.unread { border-left-color: #2563eb; background: #f8fbff; }
+.closed { opacity: .7; }
+.itemHeader { display: flex; justify-content: space-between; gap: 10px; }
+.item p { margin: 6px 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 9px; color: #64748b; font-size: 11px; }
+.itemActions { margin-top: 8px; }
+.dismiss { color: #334155; background: transparent; border: 1px solid #94a3b8; }
+.message { padding: 13px; margin-top: 10px; border-radius: 7px; background: #f1f5f9; }
+.error { color: #991b1b; background: #fef2f2; }
+.more { display: block; margin-top: 12px; text-align: center; color: #1d4ed8; }
+@media (max-width: 650px) { .header, .itemHeader { flex-direction: column; } .page { padding: 14px; } }
+:global([data-theme="dark"]) .unread { background: #172554; }
+:global([data-theme="dark"]) .signals { background: #451a03; color: #fde68a; }

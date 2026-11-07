@@ -17,6 +17,7 @@ const ALWAYS_AVAILABLE_PATHS = new Set([
   "/employee-portal/dashboard",
   "/employee-portal/profile",
   "/employee-portal/changepassword",
+  "/employee-portal/notifications",
 ]);
 
 const FEATURE_ROUTES: Array<[string, string]> = [
@@ -30,6 +31,11 @@ const FEATURE_ROUTES: Array<[string, string]> = [
   ["/employee-portal/selfservice/SALN", "ep.saln"],
   ["/employee-portal/selfservice/MyPerformanceCommitments", "primehr.individual-performance-commitment"],
   ["/employee-portal/selfservice/MyPerformanceMonitoring", "primehr.performance-monitoring"],
+  ["/employee-portal/selfservice/MyPerformanceRatings", "primehr.performance-rating"],
+  ["/employee-portal/selfservice/MyPerformanceReports", "primehr.performance-form-report"],
+  ["/employee-portal/selfservice/MyLearning", "primehr.ld-needs"],
+  ["/employee-portal/selfservice/MyRecognitions", "primehr.rr-nomination"],
+  ["/employee-portal/selfservice/MyCareerDevelopment", "primehr.succession-pool"],
 ];
 
 export default function PortalAccessGuard({ children }: { children: React.ReactNode }) {
@@ -53,7 +59,23 @@ export default function PortalAccessGuard({ children }: { children: React.ReactN
     const permissions = await loadPortalPermissions(true);
     const feature = FEATURE_ROUTES.find(([route]) => pathname.startsWith(route));
     const routeAllowed = feature
-      ? canAccessPortalFeature(permissions, feature[1])
+      ? feature[0].endsWith("/MyPerformanceRatings")
+        ? ["primehr.performance-rating", "primehr.performance-appeal", "primehr.performance-intervention"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+        : feature[0].endsWith("/MyPerformanceReports")
+          ? ["primehr.performance-form-report", "primehr.performance-monitoring-report"]
+              .some((key) => canAccessPortalFeature(permissions, key))
+        : feature[0].endsWith("/MyLearning")
+          ? ["primehr.ld-needs", "primehr.ld-individual-plan", "primehr.ld-nomination",
+              "primehr.ld-evaluation", "primehr.ld-report"]
+              .some((key) => canAccessPortalFeature(permissions, key))
+        : feature[0].endsWith("/MyRecognitions")
+          ? ["primehr.rr-nomination", "primehr.rr-award", "primehr.rr-report"]
+              .some((key) => canAccessPortalFeature(permissions, key))
+        : feature[0].endsWith("/MyCareerDevelopment")
+          ? ["primehr.succession-pool", "primehr.succession-readiness", "primehr.succession-development", "primehr.succession-report"]
+              .some((key) => canAccessPortalFeature(permissions, key))
+        : canAccessPortalFeature(permissions, feature[1])
       : pathname.startsWith("/employee-portal/workforce-structure/")
         ? permissions.hasAssignedRole
         : permissions.hasAssignedRole;

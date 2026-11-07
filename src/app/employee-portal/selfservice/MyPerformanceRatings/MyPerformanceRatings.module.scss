@@ -1,0 +1,22 @@
+.page { background: #fff; border-radius: 10px; margin: 30px; padding: 24px; }
+.page h1, .page h2 { color: #4058c7; }
+.lead { color: #526176; }
+.notice { background: #e7f5eb; border: 1px solid #94cda3; border-radius: 6px; padding: 10px; }
+.error { background: #fff0f0; border: 1px solid #e3a1a1; border-radius: 6px; padding: 10px; }
+.summary { background: #edf2f8; border-radius: 6px; padding: 10px; }
+.card { border: 1px solid #dce3ed; border-radius: 7px; margin-top: 14px; padding: 14px; }
+.tableWrap { overflow-x: auto; }
+.table { border-collapse: collapse; margin-top: 12px; width: 100%; }
+.table th, .table td { border-bottom: 1px solid #dce3ed; padding: 9px; text-align: left; vertical-align: top; }
+.table th { background: #edf2f8; }
+.form { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(180px, 1fr)); margin: 12px 0; }
+.form label { display: grid; font-size: 13px; font-weight: 700; gap: 5px; }
+.form input, .form textarea { border: 1px solid #b7c2d1; border-radius: 5px; box-sizing: border-box; padding: 8px; width: 100%; }
+.wide { grid-column: 1 / -1; }
+.json { min-height: 150px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.actions button, .table button, .card button { background: #294d7a; border: 0; border-radius: 5px; color: #fff; cursor: pointer; padding: 7px 10px; }
+.actions button:disabled { cursor: not-allowed; opacity: .5; }
+.danger { background: #a43e3e !important; }
+.history { color: #65738a; font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 850px) { .form { grid-template-columns: 1fr; } .wide { grid-column: auto; } }

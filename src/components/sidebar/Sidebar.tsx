@@ -134,6 +134,31 @@ const essItems = [
     path: "/employee-portal/selfservice/MyPerformanceMonitoring",
     permissionKey: "primehr.performance-monitoring",
   },
+  {
+    label: "My Performance Ratings",
+    path: "/employee-portal/selfservice/MyPerformanceRatings",
+    permissionKey: "primehr.performance-rating",
+  },
+  {
+    label: "My Performance Reports",
+    path: "/employee-portal/selfservice/MyPerformanceReports",
+    permissionKey: "primehr.performance-form-report",
+  },
+  {
+    label: "My Learning",
+    path: "/employee-portal/selfservice/MyLearning",
+    permissionKey: "primehr.ld-needs",
+  },
+  {
+    label: "My Nominations & Recognitions",
+    path: "/employee-portal/selfservice/MyRecognitions",
+    permissionKey: "primehr.rr-nomination",
+  },
+  {
+    label: "My Career and Development",
+    path: "/employee-portal/selfservice/MyCareerDevelopment",
+    permissionKey: "primehr.succession-pool",
+  },
 ];
 
 export default function Sidebar() {
@@ -194,7 +219,7 @@ export default function Sidebar() {
 
   // Employee info state
   const [empInfo, setEmpInfo] = useState({
-    photo: "/default-avatar.jpg",
+    photo: "/accounts.png",
     fullName: "",
     employeeNo: "",
     position: "",
@@ -239,7 +264,23 @@ useEffect(() => {
   }, []);
 
   const visibleEssItems = permissions
-    ? essItems.filter((item) => canAccessPortalFeature(permissions, item.permissionKey))
+    ? essItems.filter((item) => item.path.endsWith("/MyPerformanceRatings")
+      ? ["primehr.performance-rating", "primehr.performance-appeal", "primehr.performance-intervention"]
+          .some((key) => canAccessPortalFeature(permissions, key))
+      : item.path.endsWith("/MyPerformanceReports")
+        ? ["primehr.performance-form-report", "primehr.performance-monitoring-report"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+      : item.path.endsWith("/MyLearning")
+        ? ["primehr.ld-needs", "primehr.ld-individual-plan", "primehr.ld-nomination",
+            "primehr.ld-evaluation", "primehr.ld-report"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+      : item.path.endsWith("/MyRecognitions")
+        ? ["primehr.rr-nomination", "primehr.rr-award", "primehr.rr-report"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+      : item.path.endsWith("/MyCareerDevelopment")
+        ? ["primehr.succession-pool", "primehr.succession-readiness", "primehr.succession-development", "primehr.succession-report"]
+            .some((key) => canAccessPortalFeature(permissions, key))
+      : canAccessPortalFeature(permissions, item.permissionKey))
     : [];
 
   // Fetch employee info for the sidebar card
@@ -265,7 +306,7 @@ useEffect(() => {
     ]).then(([personalData, appointment, jobPositions, personnel, businessUnits, workflows]) => {
       const photo = personalData?.employeePicture
         ? `data:image/jpeg;base64,${personalData.employeePicture}`
-        : "/default-avatar.jpg";
+        : "/accounts.png";
 
       const jobPositionId = appointment?.jobPositionId;
       const position = (jobPositions as { jobPositionId: number; jobPositionName: string }[]).find(jp => jp.jobPositionId === jobPositionId)?.jobPositionName ?? "";

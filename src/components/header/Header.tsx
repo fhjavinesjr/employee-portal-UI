@@ -141,7 +141,7 @@ export default function Header() {
             />
           ) : (
             <Image
-              src="/avatar-default.png"
+              src="/accounts.png"
               alt="User Avatar"
               width={34}
               height={34}
